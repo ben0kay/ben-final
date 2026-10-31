@@ -4,7 +4,7 @@
 >
 > **Repository:** `ben0kay/ben-final` — current development branch `main`.
 > **Last documented user tests:** October 30, 2026 (Godot 4.7.2 .NET, screenshots supplied in chat).
-> **State:** Original 96×96 m visual marching-cubes preview and mesh-resolution benchmarks were run on the owner's PC. An expanded **576×576 m static flyover** (81 chunks) is now authored but **has not been run/benchmarked by the owner yet**. Dynamic streaming, distance LOD, caves, vegetation, persistence and a production-scale world are **not implemented**.
+> **State:** Original 96×96 m preview and MeshStep comparison were owner-tested. The new **BW-W3A composed valley/hills/jagged mountain pass** on the 576×576 m static world is implemented in source but **awaits owner visual/build/performance testing**. Streaming, mixed-distance LOD, real caves, vegetation, persistence and production-scale terrain remain **not implemented**.
 >
 > **Companion documents:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md) explains the intended geology/terrain techniques; [README.md](README.md) explains existing files and how to run them; [root README](../README.md) tracks the project's milestone statuses; [CodePreferences](../CodePreferences.md) and [AGENTS](../AGENTS.md) govern coding and Git practice.
 
@@ -30,19 +30,19 @@ Engineering rules:
 | --- | --- | --- |
 | Independent free-fly test scene | `SCENE/Scene_World.tscn`, `WORLD/Debug/` | **Runs locally**, according to screenshots; WASD/arrows, Q/E vertical, Shift speed, inverted mouse look |
 | Reusable world scene | `WORLD/World.tscn` | **Implemented** as the scene instance used by Scene_World |
-| World-space seeded terrain shaping | `WORLD/Generation/DensityGenerator.cs` | **Implemented**; currently **height-derived density** `Height(x,z)-y`, not volumetric caves |
-| Classic indexed marching cubes | `WORLD/Generation/MarchingCubesMesher.cs` | **Implemented and visually working** on nine equal-resolution chunks; indexed shared-edge vertices and reuse of precomputed heights for normals |
+| World-space seeded terrain shaping | `WORLD/Generation/DensityGenerator.cs` | **BW-W3A implemented in source, awaiting validation**: world-space valley corridor, foothills and sharp north-side mountain range; still **height-derived density** `Height(x,z)-y`, not caves |
+| Classic indexed marching cubes | `WORLD/Generation/MarchingCubesMesher.cs` | **Previously visually validated** on nine low chunks; now extends vertical sampling to configurable bounds, using revised vertical edge-cache stride. Tall mountain topology **awaits validation** |
 | Grass/rock color material | `WORLD/Materials/WorldTerrain.gdshader` | **Visually visible**, but deliberately basic; not the final terrain art |
 | Fixed terrain patch and asynchronous CPU generation | `WORLD/WorldPreview.cs` | **Implemented**, one managed worker calculates chunk mesh data centre-first; one mesh or collider operation per main-thread frame. **Expanded 9×9 preset awaits validation** |
 | Optional physics in nearby chunks | `WORLD/WorldPreview.cs`, `WORLD/Configuration/WorldMaster.tres` | **Implemented**, default one centre-chunk collider; **walking/collision accuracy not yet validated** |
-| Inspector settings | `WORLD/Configuration/WorldSettings.cs`, `WorldMaster.tres` | **Implemented**: seed, geography amplitudes, chunk size, mesh step, collider radius, debug thresholds |
+| Inspector settings | `WORLD/Configuration/WorldSettings.cs`, `WorldMaster.tres` | **Implemented**: all earlier sampling/collider/debug settings plus valley width, mountain mass, peak amplitude/sharpness, mountain northward bounds, height limits |
 | Generation statistics | `WORLD/WorldPreview.cs`, `WORLD/Debug/WorldTestScene.cs` | **Runs locally** in earlier small test: mesh/physics timing and spike count. Expanded test adds preceding-frame operation correlation and 30 post-load diagnostic frames; **not yet verified** |
 | Test-scene scale landmark | `WORLD/Debug/WorldScaleTree.tscn`, `WorldScaleTree.cs`, `SCENE/Scene_World.tscn` | **Authored; awaiting local validation**. One 14 m pine under `WorldActorsRoot/DebugPropsRoot`, positioned using the height function; test-only, no collider and removable as one scene instance |
 | Continuous terrain streaming / unload | — | **Not implemented**; all requested chunks are generated once, remain in memory |
 | Distance-dependent mesh LOD and stitching | — | **Not implemented**; `MeshStep` is one uniform global resolution for the entire test patch |
 | 3D cave/overhang editing, save state, forest, water | — | **Not implemented** |
 
-**Current configured larger flyover (awaiting validation):** `ChunkRadius=4` produces **9×9 = 81 chunks**; `CellsPerChunk=32`, `CellSize=2 m` yields **64×64 m chunks** and a **576×576 m horizontal patch**. Nominal vertical coverage is **y=0 to 64 m**; heights outside the volume can be clipped. Default `MeshStep=1` samples every **2 m** and steps 2/4 sample every **4/8 m**. `CollisionChunkRadius=0` means the centre chunk only, **not proximity-based streaming**. The worker generates chunks centre-outward; they are all retained after loading. Restore `ChunkRadius=1` and `CellSize=1 m` for historical 96 m measurements.
+**Current configured larger flyover (awaiting validation):** `ChunkRadius=4` produces **9×9 = 81 chunks**; `CellsPerChunk=32`, `CellSize=2 m` yields **64×64 m chunks** and a **576×576 m horizontal patch**. Configurable vertical coverage is now **y=-16 to 300 m** independent of the 64 m horizontal chunk size; heights outside this range can still be clipped. Default `MeshStep=1` samples every **2 m** and steps 2/4 sample every **4/8 m**. `CollisionChunkRadius=0` means the centre chunk only, **not proximity-based streaming**. The worker generates chunks centre-outward; they are all retained after loading. Restore `ChunkRadius=1` and `CellSize=1 m` for historical 96 m measurements.
 
 ## 3. Observed performance — preserve these benchmarks
 
@@ -149,7 +149,18 @@ These tickets specify **recommended next tasks**, not permission to implement al
 
 **Acceptance:** No visible cracks between step 1/2/4 neighbours, LOD switching is stable while moving and temporal artifacts are acceptable; measured triangle, CPU/GPU time and memory at fixed view distances.
 
-### BW-W3 — Coherent geography and true 3D density (P2; can prototype in parallel)
+### BW-W3A — Composed geography (IMPLEMENTED IN SOURCE; AWAITING OWNER VALIDATION)
+
+The reference layout is **foreground meadows / winding lowland valley → side foothills → connected jagged range toward negative Z**. `WORLD/Generation/DensityGenerator.cs` now combines regional masks, low-frequency terrain, smoother foothills, broad mountain mass and narrow ridged peaks. It uses seed-deterministic world-space coordinates without per-chunk boundary resets.
+
+- `ValleyHalfWidth` widens/narrows flatter traversable ground. `RidgeAmplitude` (legacy export name) tunes rolling hills. `MountainAmplitude`, `PeakAmplitude`, `PeakSharpness` and northward `MountainStartZ/FullZ` control the distant skyline.
+- Default heights in the current prototype seed, from a **formula-level numerical sample** (not a Godot render or FPS benchmark), are roughly 12–26 m in the foreground and can reach ~160 m in the far range.
+- The previous assumption that vertical sample height == horizontal chunk width clipped tall geography. The mesher now uses independent `TerrainBottomY=-16` / `TerrainTopY=300` metre limits and checks only vertical cells around the height-derived surface. Its shared-edge vertex cache now uses a **vertical stride** sized for the configured elevation range, avoiding key collisions when Y indices exceed horizontal N.
+- Existing 9×9 static world, worker queue, debug HUD, slope coloring, standalone scale tree and category root structure are preserved; a small high-altitude material tint is added. The camera starts near z=240 and faces north for a better composition view.
+- **Acceptance:** owner opens `Scene_World` F6 and sees flatter usable land at the foreground, progressively rolling foothills, distinct high jagged peaks on the far side and the 14 m landmark. Confirm terrain doesn't stop at y=64, adjacent chunk seams remain sealed, collision at the central patch works, and generation/frame time remains acceptable. Record screenshot plus 81/81 chunk count.
+- **Limitations:** mountain surfaces are still height-derived, so vertical cliffs, caverns, undercuts and realistic erosional drainage are not yet solved. Do not confuse the simulated height map with true 3D density.
+
+### BW-W3B — True 3D caves and overhangs (PLANNED)
 
 - Design at least one repeatable terrain scenario: grassy lowland → rolling foothills → connected ridged mountain range.
 - Expose large-scale shape/warp/height bands separately from local detail; avoid noisy terrain everywhere.

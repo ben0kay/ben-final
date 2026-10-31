@@ -1,6 +1,6 @@
 # WORLD — Procedural World Preview
 
-**Status:** The original 96×96 m preview and resolution comparison were run successfully by the owner. A new **576×576 m, 9×9-chunk static flyover** has been configured; **awaiting local build/play and performance validation**. This is still a finite preview, not streamed terrain.
+**Status:** The original 96×96 m preview and resolution comparison were tested by the owner. **BW-W3A** now composes a flatter valley, rolling hills and a jagged north-side mountain range across the **576×576 m, 9×9 static flyover**. New landscape and performance **await Godot validation**; this is not streaming or a cave system.
 
 **Continuation plan:** [WORLD_IMPLEMENTATION_PLAN.md](WORLD_IMPLEMENTATION_PLAN.md) — owner-run benchmarks, findings, P0/P1/P2 work tickets and acceptance tests for Codex. **Authoring guide:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md). Keep generation, rendering, collisions, future vegetation and LOD under WORLD, separate from PLAYER.
 
@@ -14,8 +14,8 @@ WORLD/
 │   ├── WorldSettings.cs                Shared settings: mesh step, collision range, performance warnings
 │   └── WorldMaster.tres                Inspector-editable default values
 ├── Generation/
-│   ├── DensityGenerator.cs             Seeded world-space geography, height-derived density
-│   ├── MarchingCubesMesher.cs          Indexed marching cubes with reused gradient height samples
+│   ├── DensityGenerator.cs             Seeded regional valley/foothills/mountain range height-derived density
+│   ├── MarchingCubesMesher.cs          Indexed cubes; independently bounded vertical sampling for tall peaks
 │   └── LOOKUP_TABLE_LICENSE.md        Original table attribution
 ├── Materials/
 │   └── WorldTerrain.gdshader          Grassy/rocky slope blend
@@ -36,6 +36,32 @@ WORLD/
 2. Fly using WASD/arrow keys, Q/E to descend/ascend, Shift to accelerate, mouse to look (inverted Y); Escape releases capture.
 3. HUD shows **chunks, triangles, CPU meshing, mesh setup, collision cooking, worst observed frame delta and spike count**. Godot **Output** prints one performance line per chunk, with separate lines for colliders and warnings.
 4. Edit `WORLD/Configuration/WorldMaster.tres` to change settings. Stop and restart F6 to regenerate; changes aren't live.
+
+### BW-W3A terrain layout — new reference composition
+
+The test camera starts near **(8, 63, 240)** looking toward **negative Z / north**. The 14 m `ScalePine_14m` remains near **(8, ground height, 90)**. Current seed is 147.
+
+- **Foreground (positive Z):** a broad, gently uneven meadow/valley corridor with low noise, suitable for later paths, structures and vegetation.
+- **Middle ground (roughly Z 80 to -100):** rolling side foothills that rise smoothly outside the meandering valley, not random peaks spread over every metre.
+- **Far ground (negative Z, especially beyond about -100):** a broad connected mountain range plus sharper secondary crests. The transition is masked and warped in world metres, so it is coherent and deterministic across chunks.
+- **Material:** existing green/rock blending is preserved; a subtle high-altitude light-stone/snow tint improves silhouette readability, without imported textures or vegetation.
+
+**Key Inspector controls** in `WORLD/Configuration/WorldMaster.tres` (defaults are tentative, not visually approved):
+
+| Group | Setting | Default | Purpose |
+| --- | --- | ---: | --- |
+| Lowlands | `BaseHeight` | 14 m | Basic meadow elevation |
+| Lowlands | `BroadAmplitude` / `DetailAmplitude` | 4 / 1.5 m | Gentle foreground waviness |
+| Lowlands | `ValleyHalfWidth` | 90 m | Width of central flatter corridor |
+| Foothills | `RidgeAmplitude` | 18 m | Rolling hill uplift (original export name retained) |
+| Mountains | `MountainAmplitude` | 95 m | Large connected background uplift |
+| Mountains | `PeakAmplitude` / `PeakSharpness` | 80 m / 4 | Sharp ridge additions and crest narrowness |
+| Mountains | `MountainStartZ` / `MountainFullZ` | -40 / -220 m | Northward rise start and near-full mountain mask |
+| Vertical range | `TerrainBottomY` / `TerrainTopY` | -16 / 300 m | Limits supported surface elevations, independent of 64 m chunk width |
+
+The mesher still samples **only cells around the surface**; it does not allocate an `81 × 300m` volumetric density grid. Raising the vertical range increases supported height **without making the horizontal chunks any larger**. The surface remains a height-derived density (`Height(x,z)-y`): steep mountain walls are possible, **true caves/overhangs are not**. Same-resolution seams still need checking.
+
+To test: build C#, F6 `SCENE/Scene_World.tscn`, let 81 chunks finish, fly from the meadow toward negative Z, and compare the ridge line from both aerial and low-altitude views. Check no flat-topped clipping, holes, major polygon spikes or collision errors; note the per-chunk CPU/mesh timing. Adjust `MountainAmplitude`, `PeakAmplitude`, `ValleyHalfWidth` and `PeakSharpness` one at a time. **Do not infer FPS improvement from the original small-world measurements:** this is a different seed-based terrain function with greater relief.
 
 ### Recommended performance controls
 
@@ -81,7 +107,7 @@ Do **not** infer sustained FPS or mixed-resolution LOD correctness from this sin
 
 ## Larger flyover experiment — configured, not yet measured
 
-The default `WorldMaster.tres` now uses **ChunkRadius 4, CellsPerChunk 32, CellSize 2 m and MeshStep 1**, yielding a **576×576 m** patch composed of **81 visible 64-metre chunks**. The vertical sampling volume extends from y=0 to y=64 m; this is not a general 3D cave/chunk architecture. The fly camera now begins higher and farther away and moves at **28 m/s** (or **84 m/s with Shift**), with a farther clip plane.
+The default `WorldMaster.tres` now uses **ChunkRadius 4, CellsPerChunk 32, CellSize 2 m and MeshStep 1**, yielding a **576×576 m** patch composed of **81 visible 64-metre chunks**. The height-derived surface sampling now supports elevations between `TerrainBottomY = -16` m and `TerrainTopY = 300` m, independently from chunk width. It still cannot produce volumetric caves or overhangs. The fly camera now begins higher and farther away and moves at **28 m/s** (or **84 m/s with Shift**), with a farther clip plane.
 
 **Test:** Launch `SCENE/Scene_World.tscn` with F6; the scene should fill the nearby area first and attach all **81/81** chunks. Let the build finish, then fly across the middle, towards each edge and back. Inspect screenshot continuity, close-up terrain shape, any chunk holes and the Godot profiler's frame graph. Note total triangle count, CPU meshing, mesh/collision setup, spike correlation counters, and whether spikes persist **after loading**. The scene doesn't unload chunks when you move; it is **not a streaming benchmark**.
 
@@ -89,6 +115,6 @@ To test cheaper geometry across the *same* 576-metre patch, use `MeshStep=2` (4-
 
 ## Next validation
 
-Verify all nine surface chunks remain visible and green, preserve the earlier black-terrain winding/lighting fix, inspect same-resolution edges, confirm only the intended colliders exist, and check Godot **Output** for per-chunk timings and warnings. Profile main-thread spikes before enlarging the world.
+Verify all **81** terrain chunks show the intended meadow/foothills/mountains without unexpected flat tops or missing cliff surfaces, preserve the earlier black-terrain winding/lighting fix, inspect same-resolution borders, confirm only the intended colliders exist, and check Godot **Output** for per-chunk timing warnings. Startup spikes may be acceptable for this static loading test; gameplay streaming stutter remains a future concern.
 
 The next unimplemented systems are true streaming/residency, distance-dependent LOD transition geometry, caves and vegetation. See [root roadmap](../README.md).

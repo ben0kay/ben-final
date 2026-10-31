@@ -2,7 +2,7 @@
 
 **Repository:** ben0kay/ben-final  
 **Engine:** Godot 4 .NET / C# (existing Ben Final project.godot preserved; C# support configured)  
-**Status:** First custom terrain preview and FPS test authored. Owner tested the original 96×96 m terrain and MeshStep comparison; the expanded **576×576 m static flyover** is now configured and awaits local testing. True streaming, distance LOD and caves remain planned.
+**Status:** Custom marching-cubes terrain and standalone FPS scene authored. The owner tested the original 96×96 m preview and mesh-step comparison. A new **576×576 m composed valley–foothill–jagged mountain landscape** (BW-W3A) is authored and awaits local visual/performance validation. True streaming, mixed-distance LOD and caves remain planned.
 
 ## Vision
 
@@ -17,7 +17,7 @@ Build each subsystem in its own scene and test environment; bring them together 
 | Development scene | Primary purpose | Dependencies |
 | --- | --- | --- |
 | **SCENE/Scene_Player.tscn** | Arrow-key FPS, inverted mouse look, RMB jump and right-Ctrl crouch | Instances reusable PLAYER/Player.tscn; graybox with collision (awaiting validation) |
-| **SCENE/Scene_World.tscn** | Static 9×9 marching-cubes hills (576×576 m), generation timing and faster free-fly camera | Instances WORLD/World.tscn; does not require Player; expanded size awaits validation |
+| **SCENE/Scene_World.tscn** | Static 9×9 marching-cubes geography (576×576 m): lowland valley, rolling foothills and far jagged peaks | Instances WORLD/World.tscn; no Player required; new geography awaits validation |
 | **SCENE/Scene_Buildings.tscn** | Buildings, interiors, doors, props, stairs, basements, collision | Building scenes and test ground |
 | **SCENE/Scene_AI.tscn** | Pathfinding, perception, investigation, combat and NPC simulation | AI actors, simple target/player stand-in, test geometry |
 | **SCENE/Scene_Game.tscn** | Eventually instantiate integrated World, Player, AI and UI | Only systems ready for integration |
@@ -156,7 +156,8 @@ The terrain vision is **coherent large-scale geography**, not random noisy hills
 | **BW-00** | Repository and project foundation | Documentation and .NET project; local project.godot still needs a GitHub commit | **In Progress** |
 | **BW-W1** | Marching-cubes proof of concept | Surface density, indexed mesh, shared-height normals, separate mesh/collision timing, debug spike counters and resolution comparison | **Awaiting Validation** |
 | **BW-W2** | Adjacent chunk generation | Same-resolution chunks and centre-first static 9×9 preview; 576×576 m flyover awaiting local inspection and seam checks | **Awaiting Validation** |
-| **BW-W3** | Natural geography and caves | Coherent terrain regions, height variation, ridges, density shaping, cliffs, caves, overhangs and tunable seed | **Planned** |
+| **BW-W3A** | Composed geography | Flat valley corridor, rolling foothills, far mountainous belt, jagged peaks and tunable vertical bounds; new owner test pending | **Awaiting Validation** |
+| **BW-W3B** | True 3D caves and overhangs | Full volumetric density, vertical chunk ownership, cave entrances, editable terrain and basements | **Planned** |
 | **BW-W4** | Streaming and LOD | Loading/unloading, distance LOD and transition geometry; initial preview has only a one-worker finite generation queue | **Planned** |
 | **BW-W5** | Forest and atmosphere pass | Terrain materials, grass, pine trees, vegetation LOD/instancing, lighting/fog | **Planned** |
 | **BW-F1** | Isolated FPS test | Reusable player, arrow keys, inverted mouse, RMB jump, right-Ctrl crouch and graybox test room | **Awaiting Validation** |

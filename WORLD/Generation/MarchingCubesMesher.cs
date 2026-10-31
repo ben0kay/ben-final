@@ -108,6 +108,11 @@ CggICgv/////////AwEKCwMK/////////////wECCwELCQkLCP////////8DAAkDCQsBAgkCCwn/
         int n = config.CellsPerChunk / config.MeshStep, side = n + 1;
         float cell = config.CellSize * config.MeshStep, width = config.ChunkWidth;
         float originX = chunkX * width, originZ = chunkZ * width;
+        // Horizontal LOD and vertical height bounds are independent. Only cells near
+        // the sampled surface are visited; no tall volume-sized density array is allocated.
+        int minY = (int)MathF.Floor(config.TerrainBottomY / cell);
+        int maxY = (int)MathF.Ceiling(config.TerrainTopY / cell) - 1;
+        int verticalStride = maxY - minY + 2;
         var heights = new float[side * side];
         var sampleNormals = new Vector3[side * side];
 
@@ -148,8 +153,11 @@ CggICgv/////////AwEKCwMK/////////////wECCwELCQkLCP////////8DAAkDCQsBAgkCCwn/
             float h11 = heights[(x + 1) * side + z + 1];
             float min = MathF.Min(MathF.Min(h00, h10), MathF.Min(h01, h11));
             float max = MathF.Max(MathF.Max(h00, h10), MathF.Max(h01, h11));
-            int firstY = Math.Clamp((int)MathF.Floor(min / cell) - 1, 0, n - 1);
-            int lastY = Math.Clamp((int)MathF.Ceiling(max / cell) + 1, 0, n - 1);
+            // This also handles negative elevation and peaks well above chunk width.
+            // If the complete column is outside the supported vertical range, skip it.
+            if (max < config.TerrainBottomY || min > config.TerrainTopY) continue;
+            int firstY = Math.Clamp((int)MathF.Floor(min / cell) - 1, minY, maxY);
+            int lastY = Math.Clamp((int)MathF.Ceiling(max / cell) + 1, minY, maxY);
 
             for (int y = firstY; y <= lastY; y++)
             {
@@ -168,9 +176,9 @@ CggICgv/////////AwEKCwMK/////////////wECCwELCQkLCP////////8DAAkDCQsBAgkCCwn/
                     int e0 = Triangles[start + i];
                     if (e0 == 255) break;
                     int e1 = Triangles[start + i + 1], e2 = Triangles[start + i + 2];
-                    int a = VertexForEdge(e0, x, y, z, n, cell, values, sampleNormals, edgeCache, vertices, normals);
-                    int b = VertexForEdge(e1, x, y, z, n, cell, values, sampleNormals, edgeCache, vertices, normals);
-                    int c = VertexForEdge(e2, x, y, z, n, cell, values, sampleNormals, edgeCache, vertices, normals);
+                    int a = VertexForEdge(e0, x, y, z, n, cell, minY, verticalStride, values, sampleNormals, edgeCache, vertices, normals);
+                    int b = VertexForEdge(e1, x, y, z, n, cell, minY, verticalStride, values, sampleNormals, edgeCache, vertices, normals);
+                    int c = VertexForEdge(e2, x, y, z, n, cell, minY, verticalStride, values, sampleNormals, edgeCache, vertices, normals);
                     // Godot's ArrayMesh front-face winding follows the classic table order for
                     // this corner convention; reversing it made the visible terrain back-facing.
                     // Vertex normals still point outward/up from the signed-density field.
@@ -183,8 +191,9 @@ CggICgv/////////AwEKCwMK/////////////wECCwELCQkLCP////////8DAAkDCQsBAgkCCwn/
 
     // =========================================================
     // Cache vertex by canonical lattice edge (first endpoint plus axis).
-    private static int VertexForEdge(int edge, int x, int y, int z, int n, float cell, ReadOnlySpan<float> d,
-        Vector3[] sampleNormals, Dictionary<int, int> cache, List<Vector3> vertices, List<Vector3> normals)
+    private static int VertexForEdge(int edge, int x, int y, int z, int n, float cell,
+        int minY, int verticalStride, ReadOnlySpan<float> d, Vector3[] sampleNormals,
+        Dictionary<int, int> cache, List<Vector3> vertices, List<Vector3> normals)
     {
         int a = EA[edge], b = EB[edge];
         int ax = x + CX[a], ay = y + CY[a], az = z + CZ[a];
@@ -192,7 +201,9 @@ CggICgv/////////AwEKCwMK/////////////wECCwELCQkLCP////////8DAAkDCQsBAgkCCwn/
         int axis = ax != bx ? 0 : ay != by ? 1 : 2;
         int gx = Math.Min(ax, bx), gy = Math.Min(ay, by), gz = Math.Min(az, bz);
         int side = n + 1;
-        int key = (((gx * side + gy) * side + gz) * 3) + axis;
+        // An independently sized vertical stride prevents edge-cache collisions once
+        // height spans exceed horizontal chunk resolution.
+        int key = (((gx * verticalStride + (gy - minY)) * side + gz) * 3) + axis;
         if (cache.TryGetValue(key, out int existing)) return existing;
 
         float difference = d[a] - d[b];

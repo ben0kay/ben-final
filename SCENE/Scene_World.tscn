@@ -46,7 +46,7 @@ shadow_enabled = true
 [node name="DebugRoot" type="Node3D" parent="."]
 
 [node name="DebugCamera" type="Camera3D" parent="DebugRoot"]
-transform = Transform3D(1, 0, 0, 0, 0.906308, -0.422618, 0, 0.422618, 0.906308, 8, 62, 180)
+transform = Transform3D(1, 0, 0, 0, 0.987688, -0.156434, 0, 0.156434, 0.987688, 8, 63, 240)
 script = ExtResource("2")
 current = true
 fov = 78.0

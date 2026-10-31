@@ -15,7 +15,11 @@ void fragment() {
     vec3 grass = mix(vec3(0.19, 0.29, 0.16), vec3(0.30, 0.40, 0.20), 0.5 + variation * 0.22);
     float rock_weight = 1.0 - smoothstep(0.58, 0.84, terrain_upness);
     vec3 stone = vec3(0.35, 0.36, 0.34) + variation * 0.025;
-    ALBEDO = mix(grass, stone, rock_weight);
+    vec3 ground = mix(grass, stone, rock_weight);
+    // Visual readability only: very high ridgelines show cold exposed stone / light snow.
+    float snow_weight = smoothstep(145.0, 200.0, world_position.y) *
+        smoothstep(0.4, 0.9, terrain_upness);
+    ALBEDO = mix(ground, vec3(0.78, 0.8, 0.78), snow_weight);
     ROUGHNESS = 0.94;
     METALLIC = 0.0;
 }

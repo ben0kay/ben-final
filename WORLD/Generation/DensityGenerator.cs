@@ -1,4 +1,4 @@
-// Deterministic world-space terrain density: positive solid, negative air, zero surface.
+// Deterministic, region-composed world-space geography: valley, rolling foothills and mountain range.
 using System;
 using Godot;
 
@@ -7,37 +7,81 @@ public sealed class DensityGenerator
     private readonly TerrainParameters _settings;
     public DensityGenerator(TerrainParameters settings) => _settings = settings;
 
+    #region Surface height and normals
+
     // =========================================================
-    // Continuous hills, medium detail and a broad masked ridge region; no per-chunk randomness.
+    // Negative Z is north/ahead from the default fly camera.
+    // Lowlands occupy the foreground; rolling hills grow along the sides, while
+    // the far north contains an irregular, coherent ridge with sharp subsidiary peaks.
+    // All blend masks are in WORLD metres, so the design crosses chunks seamlessly.
     public float Height(float x, float z)
     {
         int seed = _settings.Seed;
-        float warpX = Noise(x * 0.008f, z * 0.008f, seed + 187) * 9f;
-        float warpZ = Noise(x * 0.008f, z * 0.008f, seed + 283) * 9f;
-        float sx = x + warpX, sz = z + warpZ;
-        float broad = Fractal(sx * 0.014f, sz * 0.014f, seed + 1);
-        float detail = Fractal(sx * 0.048f, sz * 0.048f, seed + 2);
-        float ridge = 1f - MathF.Abs(Fractal(sx * 0.027f, sz * 0.027f, seed + 3));
-        float ridgeMask = SmoothStep(-0.35f, 0.55f, Noise(sx * 0.01f + 12f, sz * 0.01f, seed + 4));
-        return _settings.BaseHeight + _settings.BroadAmplitude * broad
-            + _settings.DetailAmplitude * detail
-            + _settings.RidgeAmplitude * ridgeMask * ridge * ridge;
+        float macroWarpX = Noise(x * 0.005f, z * 0.005f, seed + 187) * 26f;
+        float macroWarpZ = Noise(x * 0.005f, z * 0.005f, seed + 283) * 26f;
+        float sx = x + macroWarpX, sz = z + macroWarpZ;
+
+        // Lowland meadows get gentle undulations, with almost no micro-noise.
+        float lowland = _settings.BaseHeight
+            + Fractal(sx * 0.009f, sz * 0.009f, seed + 1) * _settings.BroadAmplitude
+            + Fractal(sx * 0.035f, sz * 0.035f, seed + 2) * _settings.DetailAmplitude;
+
+        // Winding central valley/corridor creates reasonably flat traversable space.
+        float centreX = 22f * MathF.Sin(z * 0.008f + seed * 0.011f);
+        float sideDistance = MathF.Abs(x - centreX);
+        float valleyEdge = SmoothStep(_settings.ValleyHalfWidth * 0.55f,
+            _settings.ValleyHalfWidth * 1.75f, sideDistance);
+        float hillNorthward = SmoothStep(-80f, 120f, -z);
+        float hillMask = Math.Clamp(valleyEdge * (0.75f + hillNorthward * 0.25f)
+            + hillNorthward * 0.2f, 0f, 1f);
+        float hillShape = 0.45f + 0.55f * Fractal(sx * 0.013f, sz * 0.014f, seed + 13);
+        float foothills = MathF.Max(0f, hillShape) * _settings.RidgeAmplitude * hillMask;
+
+        // One broad mountain chain on the far (negative Z) horizon plus flanking
+        // mountain shoulders. A slight wandering boundary avoids a straight wall.
+        float rangeBoundaryOffset = Noise(sx * 0.009f, 0.25f, seed + 31) * 24f;
+        float depth = -z + rangeBoundaryOffset;
+        float northernRange = SmoothStep(-_settings.MountainStartZ,
+            -_settings.MountainFullZ, depth);
+        float flanks = SmoothStep(_settings.ValleyHalfWidth,
+            _settings.ValleyHalfWidth + 135f, sideDistance)
+            * SmoothStep(-80f, 130f, -z) * 0.55f;
+        float mountainMask = Math.Clamp(MathF.Max(northernRange, flanks), 0f, 1f);
+        mountainMask *= mountainMask * (3f - 2f * mountainMask);
+
+        // Broad tectonic uplift first: a believable mass instead of isolated needles.
+        float massNoise = Fractal(sx * 0.011f, sz * 0.011f, seed + 71);
+        float mountainMass = _settings.MountainAmplitude * mountainMask
+            * (0.55f + 0.25f * massNoise);
+
+        // Narrow ridged noise shapes sawtooth crests across a connected range.
+        // A second octave introduces crags, but only inside mountainous regions.
+        float ridgeCoordinate = sx + sz * 0.28f;
+        float ridgeNoise = Fractal(ridgeCoordinate * 0.029f, sz * 0.018f, seed + 91);
+        float mainCrest = MathF.Pow(Math.Clamp(1f - MathF.Abs(ridgeNoise), 0f, 1f),
+            _settings.PeakSharpness);
+        float smallCrest = MathF.Pow(Math.Clamp(1f - MathF.Abs(
+            Noise(sx * 0.066f, sz * 0.059f, seed + 103)), 0f, 1f), 4f);
+        float peakHeight = _settings.PeakAmplitude * mountainMask
+            * (mainCrest * (0.75f + 0.25f * smallCrest));
+
+        return lowland + foothills + mountainMass + peakHeight;
     }
 
     // =========================================================
-    // The same 3D signed-density contract will later support caves and overhangs.
+    // Positive density is solid. The same contract can later be extended to 3D caves.
     public float Sample(float x, float y, float z) => Height(x, z) - y;
 
     // =========================================================
-    // Matching world-coordinate gradients at chunk edges eliminate visible shading seams.
     public Vector3 SurfaceNormal(float x, float z, float step)
     {
         float dx = (Height(x + step, z) - Height(x - step, z)) / (2f * step);
         float dz = (Height(x, z + step) - Height(x, z - step)) / (2f * step);
         return new Vector3(-dx, 1f, -dz).Normalized();
     }
+    #endregion
 
-    #region Managed value noise
+    #region Managed deterministic noise
 
     // =========================================================
     private static float Fractal(float x, float z, int seed)
