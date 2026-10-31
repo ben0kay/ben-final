@@ -1,0 +1,68 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://WORLD/Debug/WorldScaleTree.cs" id="1"]
+
+[sub_resource type="StandardMaterial3D" id="TrunkMaterial"]
+albedo_color = Color(0.3, 0.19, 0.105, 1.0)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="NeedleBase"]
+albedo_color = Color(0.09, 0.22, 0.115, 1.0)
+roughness = 0.93
+
+[sub_resource type="StandardMaterial3D" id="NeedleMiddle"]
+albedo_color = Color(0.12, 0.3, 0.15, 1.0)
+roughness = 0.93
+
+[sub_resource type="StandardMaterial3D" id="NeedleTop"]
+albedo_color = Color(0.14, 0.34, 0.17, 1.0)
+roughness = 0.93
+
+[sub_resource type="CylinderMesh" id="TrunkMesh"]
+top_radius = 0.18
+bottom_radius = 0.33
+height = 10.0
+radial_segments = 9
+material = SubResource("TrunkMaterial")
+
+[sub_resource type="CylinderMesh" id="LowerNeedles"]
+top_radius = 0.0
+bottom_radius = 3.6
+height = 7.0
+radial_segments = 11
+material = SubResource("NeedleBase")
+
+[sub_resource type="CylinderMesh" id="MiddleNeedles"]
+top_radius = 0.0
+bottom_radius = 2.6
+height = 6.5
+radial_segments = 11
+material = SubResource("NeedleMiddle")
+
+[sub_resource type="CylinderMesh" id="UpperNeedles"]
+top_radius = 0.0
+bottom_radius = 1.7
+height = 5.0
+radial_segments = 11
+material = SubResource("NeedleTop")
+
+[node name="WorldScaleTree" type="Node3D"]
+script = ExtResource("1")
+WorldNodePath = NodePath("../World")
+GroundSink = 0.3
+
+[node name="Trunk" type="MeshInstance3D" parent="."]
+position = Vector3(0, 5, 0)
+mesh = SubResource("TrunkMesh")
+
+[node name="FoliageLower" type="MeshInstance3D" parent="."]
+position = Vector3(0, 7, 0)
+mesh = SubResource("LowerNeedles")
+
+[node name="FoliageMiddle" type="MeshInstance3D" parent="."]
+position = Vector3(0, 9.5, 0)
+mesh = SubResource("MiddleNeedles")
+
+[node name="FoliageUpper" type="MeshInstance3D" parent="."]
+position = Vector3(0, 11.5, 0)
+mesh = SubResource("UpperNeedles")

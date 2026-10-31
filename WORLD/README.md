@@ -26,6 +26,10 @@ WORLD/
 
 [SCENE/Scene_World.tscn](../SCENE/Scene_World.tscn) instances WORLD/World.tscn and **does not require PLAYER**.
 
+### World size reference tree
+
+`SCENE/Scene_World.tscn` now contains **one test-only, ~14 m pine-shaped reference tree** directly ahead of the starting fly-camera view. The reusable prop is `WORLD/Debug/WorldScaleTree.tscn` with a tiny one-shot ground placement script (`WorldScaleTree.cs`). It queries the actual world height function at its x/z coordinates, sinks the trunk base 0.3 m, has **no collision**, no idle update and no dependencies on imported foliage assets. The tree helps judge the size of hills and the current **576×576 m** preview; it is **not** procedural forest spawning, nor a claim of final-quality vegetation. Move or remove the test-scene instance without affecting `WORLD/World.tscn`.
+
 ## Run and inspect
 
 1. Pull Ben Final, build C# in Godot 4.7.2 .NET, open `SCENE/Scene_World.tscn`, press **F6**.
