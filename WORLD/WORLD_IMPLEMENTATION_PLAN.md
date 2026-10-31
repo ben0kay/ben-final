@@ -37,7 +37,7 @@ Engineering rules:
 | Optional physics in nearby chunks | `WORLD/WorldPreview.cs`, `WORLD/Configuration/WorldMaster.tres` | **Implemented**, default one centre-chunk collider; **walking/collision accuracy not yet validated** |
 | Inspector settings | `WORLD/Configuration/WorldSettings.cs`, `WorldMaster.tres` | **Implemented**: seed, geography amplitudes, chunk size, mesh step, collider radius, debug thresholds |
 | Generation statistics | `WORLD/WorldPreview.cs`, `WORLD/Debug/WorldTestScene.cs` | **Runs locally** in earlier small test: mesh/physics timing and spike count. Expanded test adds preceding-frame operation correlation and 30 post-load diagnostic frames; **not yet verified** |
-| Test-scene scale landmark | `WORLD/Debug/WorldScaleTree.tscn`, `WorldScaleTree.cs`, `SCENE/Scene_World.tscn` | **Authored; awaiting local validation**. One 14 m low-poly pine marker, positioned from the height function; test-only and no collider |
+| Test-scene scale landmark | `WORLD/Debug/WorldScaleTree.tscn`, `WorldScaleTree.cs`, `SCENE/Scene_World.tscn` | **Authored; awaiting local validation**. One 14 m pine under `WorldActorsRoot/DebugPropsRoot`, positioned using the height function; test-only, no collider and removable as one scene instance |
 | Continuous terrain streaming / unload | — | **Not implemented**; all requested chunks are generated once, remain in memory |
 | Distance-dependent mesh LOD and stitching | — | **Not implemented**; `MeshStep` is one uniform global resolution for the entire test patch |
 | 3D cave/overhang editing, save state, forest, water | — | **Not implemented** |

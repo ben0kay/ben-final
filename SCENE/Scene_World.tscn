@@ -23,29 +23,38 @@ tonemap_mode = 2
 [node name="Scene_World" type="Node3D"]
 script = ExtResource("3")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="World" parent="." instance=ExtResource("1")]
+
+[node name="WorldActorsRoot" type="Node3D" parent="."]
+
+[node name="DebugPropsRoot" type="Node3D" parent="WorldActorsRoot"]
+
+[node name="ScalePine_14m" parent="WorldActorsRoot/DebugPropsRoot" instance=ExtResource("4")]
+position = Vector3(8, 0, 90)
+WorldNodePath = NodePath("../../../World")
+
+[node name="EnvironmentRoot" type="Node3D" parent="."]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="EnvironmentRoot"]
 environment = SubResource("Environment")
 
-[node name="Sun" type="DirectionalLight3D" parent="."]
+[node name="Sun" type="DirectionalLight3D" parent="EnvironmentRoot"]
 rotation_degrees = Vector3(-50, -34, 0)
 light_energy = 1.4
 shadow_enabled = true
 
-[node name="World" parent="." instance=ExtResource("1")]
+[node name="DebugRoot" type="Node3D" parent="."]
 
-[node name="ScalePine_14m" parent="." instance=ExtResource("4")]
-position = Vector3(8, 0, 90)
-
-[node name="DebugCamera" type="Camera3D" parent="."]
+[node name="DebugCamera" type="Camera3D" parent="DebugRoot"]
 transform = Transform3D(1, 0, 0, 0, 0.906308, -0.422618, 0, 0.422618, 0.906308, 8, 62, 180)
 script = ExtResource("2")
 current = true
 fov = 78.0
 far = 1100.0
 
-[node name="DebugHUD" type="CanvasLayer" parent="."]
+[node name="DebugUIRoot" type="CanvasLayer" parent="."]
 
-[node name="Controls" type="Label" parent="DebugHUD"]
+[node name="Controls" type="Label" parent="DebugUIRoot"]
 offset_left = 15.0
 offset_top = 15.0
 offset_right = 1050.0
@@ -53,7 +62,7 @@ offset_bottom = 63.0
 mouse_filter = 2
 text = "WORLD TEST | WASD / ARROWS: fly   Q/E: down/up   SHIFT: faster\nMOUSE: look (inverted Y)   ESC: release cursor   LEFT CLICK: recapture"
 
-[node name="Statistics" type="Label" parent="DebugHUD"]
+[node name="Statistics" type="Label" parent="DebugUIRoot"]
 offset_left = 15.0
 offset_top = 82.0
 offset_right = 600.0

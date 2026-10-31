@@ -47,7 +47,7 @@ MainGame
 └── SystemsRoot
 ~~~
 
-- This is a **planned ownership pattern**, not a demand to create empty placeholder nodes. Follow root README milestone status and instantiate only what's needed.
+- This is a **planned ownership pattern**, not a demand to create empty placeholder nodes. Follow root README milestone status and instantiate only what's needed. The independent world test now uses `Scene_World/World`, `WorldActorsRoot/DebugPropsRoot` (temporary tree), `EnvironmentRoot` (sky/sun), `DebugRoot` (fly camera), and `DebugUIRoot` (HUD). Keep test-only props out of the generated `World/TerrainRoot`, and omit empty GameplayHUD/SystemsRoot until real systems require them.
 - **SCENE/Scene_Player.tscn** instances the reusable `PLAYER/Player.tscn` in a graybox; future **SCENE/Scene_World.tscn** can generate and inspect terrain with a standalone debug camera and without the Player. Keep the ownership folders as uppercase `WORLD/`, `PLAYER/`, `ASSETS/`; do not create lowercase variants. Building and AI test scenes stay equally independent. MainGame instances and connects the systems when ready.
 - Spawn actors under persistent entity roots and structures/props under their respective roots, rather than scattering persistent objects under the World root. Separate save/stream/debug ownership.
 - Use reusable instanced subsystem scenes and lightweight organizing `Node`/`Node3D` parents; **container-only nodes need no processing scripts**. Stable paths and explicit contracts are preferable to hard-coded cross-feature test-scene references.

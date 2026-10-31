@@ -10,7 +10,7 @@ public partial class WorldTestScene : Node3D
     public override void _Ready()
     {
         _world = GetNode<WorldPreview>("World");
-        _statistics = GetNode<Label>("DebugHUD/Statistics");
+        _statistics = GetNode<Label>("DebugUIRoot/Statistics");
         _world.StatisticsChanged += UpdateStatistics;
         UpdateStatistics(_world.StatusText);
     }
