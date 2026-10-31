@@ -4,7 +4,7 @@
 >
 > **Repository:** `ben0kay/ben-final` — current development branch `main`.
 > **Last documented user tests:** October 30, 2026 (Godot 4.7.2 .NET, screenshots supplied in chat).
-> **State:** Original 96×96 m preview and MeshStep comparison were owner-tested. The new **BW-W3A composed valley/hills/jagged mountain pass** on the 576×576 m static world is implemented in source but **awaits owner visual/build/performance testing**. Streaming, mixed-distance LOD, real caves, vegetation, persistence and production-scale terrain remain **not implemented**.
+> **State:** Owner tested the 576×576 m composed mountain/valley scene visually; scale felt limited with the 14 m landmark. A **1,728×1,728 m, 729-chunk static test** with F1 size/detail presets and in-session regeneration is now authored but **awaits owner build and performance validation**. Streaming, mixed-distance LOD, real caves, vegetation and persistence remain **not implemented**.
 >
 > **Companion documents:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md) explains the intended geology/terrain techniques; [README.md](README.md) explains existing files and how to run them; [root README](../README.md) tracks the project's milestone statuses; [CodePreferences](../CodePreferences.md) and [AGENTS](../AGENTS.md) govern coding and Git practice.
 
@@ -33,16 +33,16 @@ Engineering rules:
 | World-space seeded terrain shaping | `WORLD/Generation/DensityGenerator.cs` | **BW-W3A implemented in source, awaiting validation**: world-space valley corridor, foothills and sharp north-side mountain range; still **height-derived density** `Height(x,z)-y`, not caves |
 | Classic indexed marching cubes | `WORLD/Generation/MarchingCubesMesher.cs` | **Previously visually validated** on nine low chunks; now extends vertical sampling to configurable bounds, using revised vertical edge-cache stride. Tall mountain topology **awaits validation** |
 | Grass/rock color material | `WORLD/Materials/WorldTerrain.gdshader` | **Visually visible**, but deliberately basic; not the final terrain art |
-| Fixed terrain patch and asynchronous CPU generation | `WORLD/WorldPreview.cs` | **Implemented**, one managed worker calculates chunk mesh data centre-first; one mesh or collider operation per main-thread frame. **Expanded 9×9 preset awaits validation** |
+| Fixed terrain patch and asynchronous CPU generation | `WORLD/WorldPreview.cs` | **Implemented in source:** F1 sizes 9×9 / 17×17 / 27×27, bounded six-result queue, one serialized worker, centre-first generation, cancellable runtime rebuild and 12-chunk-per-frame cleanup. **729-chunk load awaits validation** |
 | Optional physics in nearby chunks | `WORLD/WorldPreview.cs`, `WORLD/Configuration/WorldMaster.tres` | **Implemented**, default one centre-chunk collider; **walking/collision accuracy not yet validated** |
 | Inspector settings | `WORLD/Configuration/WorldSettings.cs`, `WorldMaster.tres` | **Implemented**: all earlier sampling/collider/debug settings plus valley width, mountain mass, peak amplitude/sharpness, mountain northward bounds, height limits |
-| Generation statistics | `WORLD/WorldPreview.cs`, `WORLD/Debug/WorldTestScene.cs` | **Runs locally** in earlier small test: mesh/physics timing and spike count. Expanded test adds preceding-frame operation correlation and 30 post-load diagnostic frames; **not yet verified** |
+| Generation statistics | `WORLD/WorldPreview.cs`, `WORLD/Debug/WorldTestScene.cs` | **Implemented in source:** existing timings and spike correlation, plus a new F1 panel and progress for static 9×9 / 17×17 / 27×27 presets. Runtime panel awaits Godot validation |
 | Test-scene scale landmark | `WORLD/Debug/WorldScaleTree.tscn`, `WorldScaleTree.cs`, `SCENE/Scene_World.tscn` | **Authored; awaiting local validation**. One 14 m pine under `WorldActorsRoot/DebugPropsRoot`, positioned using the height function; test-only, no collider and removable as one scene instance |
 | Continuous terrain streaming / unload | — | **Not implemented**; all requested chunks are generated once, remain in memory |
 | Distance-dependent mesh LOD and stitching | — | **Not implemented**; `MeshStep` is one uniform global resolution for the entire test patch |
 | 3D cave/overhang editing, save state, forest, water | — | **Not implemented** |
 
-**Current configured larger flyover (awaiting validation):** `ChunkRadius=4` produces **9×9 = 81 chunks**; `CellsPerChunk=32`, `CellSize=2 m` yields **64×64 m chunks** and a **576×576 m horizontal patch**. Configurable vertical coverage is now **y=-16 to 300 m** independent of the 64 m horizontal chunk size; heights outside this range can still be clipped. Default `MeshStep=1` samples every **2 m** and steps 2/4 sample every **4/8 m**. `CollisionChunkRadius=0` means the centre chunk only, **not proximity-based streaming**. The worker generates chunks centre-outward; they are all retained after loading. Restore `ChunkRadius=1` and `CellSize=1 m` for historical 96 m measurements.
+**Current configurable static flyover (awaiting larger-world validation):** `ChunkRadius=13` produces **27×27 = 729 chunks**; `CellsPerChunk=32`, `CellSize=2 m` yields **64×64 m chunks** and a **1,728×1,728 m horizontal patch**. F1 also offers radius 4 (576 m) and radius 8 (1,088 m), with uniform MeshStep=1/2 options. Configurable vertical coverage is now **y=-16 to 300 m** independent of the 64 m horizontal chunk size; heights outside this range can still be clipped. Default `MeshStep=1` samples every **2 m** and steps 2/4 sample every **4/8 m**. `CollisionChunkRadius=0` means the centre chunk only, **not proximity-based streaming**. The bounded worker generates chunks centre-outward; static chunks are all retained after loading. Restore `ChunkRadius=1` and `CellSize=1 m` for historical 96 m measurements.
 
 ## 3. Observed performance — preserve these benchmarks
 
@@ -78,17 +78,28 @@ Prior to the first performance instrumentation pass, the original nine-chunk scr
 
 These tickets specify **recommended next tasks**, not permission to implement all of them in one change. Keep one authorized ticket per reviewable commit, update this plan with measured outcomes, and retain the independent `Scene_World` test.
 
-### BW-W1.0b — Large static flyover checkpoint (CURRENT TEST; P0)
+### BW-W1.0b — Large static flyover checkpoint (EARLIER BASELINE; P0)
 
-**Goal:** Exercise 81 visible chunks over **576×576 m** without prematurely introducing streaming or mixed-resolution LOD.
+**Goal:** Use the existing 81-chunk **576×576 m** screenshot as the earlier baseline; current experiments now target up to 729 chunks without implementing streaming or mixed LOD.
 
 - Preset is now `ChunkRadius=4`, `CellsPerChunk=32`, `CellSize=2`, `MeshStep=1`, centre-only collision. `SCENE/Scene_World.tscn` uses a raised, farther-reaching camera and faster free-fly movement.
 - Worker generates concentric/square centre-out rings, so nearby chunks appear first. The scene still retains all 81 chunks and has **no dynamic unload/reload**.
 - The debug HUD shows area, loaded chunks, timing and frame-spike counts; startup spikes print the previous frame operation (mesh/collider/idle). This is **correlation, not causation**. It also observes 30 extra frames after loading, then sleeps.
 - **Acceptance:** In Godot 4 .NET, reach 81/81 chunks; fly across the middle, boundaries and far edges without holes or sustained FPS collapse. Record generation/setup/collision totals, peak frame delta, spike correlations, memory and editor/standalone conditions. Restore old settings for historical benchmark comparisons.
-- **Status: Authored, awaiting owner run and FPS validation.**
+- **Status: 576 m terrain visually inspected by owner; final startup/FPS benchmarks remain incomplete.**
 
-### BW-W1.1 — Explain startup frame spikes (NEXT DIAGNOSTIC; P0)
+### BW-W2.2 — F1 size presets and safe regeneration (CURRENT TEST; P0)
+
+**User request:** The 14 m tree exposes the small perceived scale of the original mountain composition. Increase land **area ninefold** by preserving 64 m chunks and generating a 27×27 grid (1,728×1,728 m); make F1 reveal size/detail presets and a Regenerate button.
+
+- `WORLD/Configuration/WorldMaster.tres` now defaults to **ChunkRadius=13** and `MeshStep=1` (2 m surface sampling). Available F1 presets are **576 m/81 chunks, 1,088 m/289 chunks, and 1,728 m/729 chunks**; optional uniform `MeshStep=2` is 4 m sampling.
+- `WorldTestScene.cs` manages an F1 panel under `DebugUIRoot`; it sets the cursor visible for UI and restores mouse capture when closed, and does not modify the `.tres` resource.
+- `WorldPreview.cs` cancels the current generation, uses per-generation output queues to discard stale results, serializes workers through a semaphore, throttles to six pending CPU chunks, and batch-removes existing chunks (12 per frame). One mesh or collider is still installed per frame; old results and pending collider requests do not survive regeneration.
+- The large world is **not streamed**. All 729 chunks remain in memory until a regen or scene exit. Warn about memory, build time, collisions (centre only) and initial loading. Avoid promising 60 FPS.
+- **Owner acceptance:** pull/build C#, run `SCENE/Scene_World.tscn` F6, press F1, choose each size/detail and Regenerate, confirm the HUD reaches the appropriate total with no duplicated old chunks, no runtime error and healthy frame times after construction. In particular, test switching large → small → large while a build is in progress. Verify the tree stays in `WorldActorsRoot/DebugPropsRoot` across rebuilds.
+- **Status:** Committed source awaiting local Godot runtime validation. Future work should prioritize real streaming rather than indefinitely expanding the static grid.
+
+### BW-W1.1 — Explain startup frame spikes (FOLLOW-UP; P0)
 
 **Goal:** Determine why the preview's max observed frame delta remains 116–127 ms even when CPU meshing and mesh setup totals are much smaller.
 

@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1")
-ChunkRadius = 4
+ChunkRadius = 13
 CellsPerChunk = 32
 CellSize = 2.0
 GenerateCollision = true

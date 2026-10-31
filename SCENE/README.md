@@ -3,7 +3,7 @@
 Test scenes instance reusable feature scenes; gameplay and generation code remain in their owning folders.
 
 - **[Scene_Player.tscn](Scene_Player.tscn)** — graybox FPS room with an instanced `res://PLAYER/Player.tscn`; **awaiting local Godot validation**.
-- **[Scene_World.tscn](Scene_World.tscn)** — marching-cubes terrain preview; **9×9 static chunks spanning 576×576 m**, sky/sun, faster free-flying debug camera and separated CPU/mesh/collision timing. Mesh resolution, chunk radius and collision range are in WORLD/Configuration/WorldMaster.tres; **larger preview awaiting local validation**.
+- **[Scene_World.tscn](Scene_World.tscn)** — marching-cubes terrain preview; **27×27 static chunks spanning 1,728×1,728 m by default**, F1 size/detail presets with regeneration, sky/sun and free-fly camera. Mesh resolution, chunk radius and collision range are in WORLD/Configuration/WorldMaster.tres; **larger preview awaiting local validation**.
 - `Scene_Buildings.tscn`, `Scene_AI.tscn`, `Scene_Game.tscn` — **planned**, not created.
 
 ### Scene root categories
@@ -24,7 +24,8 @@ Scene_World
 │   └── DebugCamera
 └── DebugUIRoot               (CanvasLayer)
     ├── Controls
-    └── Statistics
+    ├── Statistics
+    └── WorldSettingsPanel (hidden until F1)
 ```
 
 ### Scale reference
@@ -33,7 +34,7 @@ The composed meadow/foothills/mountains test still instances **one low-poly 14 m
 
 ## Running the World preview
 
-Build C# in Godot 4.7.2 .NET, open `SCENE/Scene_World.tscn` and press **F6**. Mouse looks around (inverted vertical by default); WASD/arrow keys fly, Q/E lower/raise, Shift moves faster, Escape releases the cursor and left click recaptures it.
+Build C# in Godot 4.7.2 .NET, open `SCENE/Scene_World.tscn` and press **F6**. Press **F1** for world-size/detail controls, select a preset, click **Regenerate world**, and press F1 again to fly. Mouse looks around (inverted vertical by default); WASD/arrow keys fly, Q/E lower/raise, Shift moves faster (now 180 m/s), Escape releases the cursor and left click recaptures it.
 
 The test's generation/performance settings are in `WORLD/Configuration/WorldMaster.tres`. Change `MeshStep` from 1 to 2 to compare triangle counts at the same physical world size, or adjust `CollisionChunkRadius` (default 0, centre only). Detailed methodology is in [WORLD/README.md](../WORLD/README.md). All terrain code belongs to `WORLD/`; `PLAYER/` is not required for the world test.
 

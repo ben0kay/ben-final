@@ -1,6 +1,6 @@
 # WORLD — Procedural World Preview
 
-**Status:** The original 96×96 m preview and resolution comparison were tested by the owner. **BW-W3A** now composes a flatter valley, rolling hills and a jagged north-side mountain range across the **576×576 m, 9×9 static flyover**. New landscape and performance **await Godot validation**; this is not streaming or a cave system.
+**Status:** The original terrain and the composed 576×576 m mountain layout were inspected by the owner. The world test now defaults to a **1,728×1,728 m, 27×27-chunk static flyover** with an **F1 world-size/detail selector and safe regeneration**. **Large-world Godot performance/visual validation is pending.** This is not streaming, automatic LOD or caves.
 
 **Continuation plan:** [WORLD_IMPLEMENTATION_PLAN.md](WORLD_IMPLEMENTATION_PLAN.md) — owner-run benchmarks, findings, P0/P1/P2 work tickets and acceptance tests for Codex. **Authoring guide:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md). Keep generation, rendering, collisions, future vegetation and LOD under WORLD, separate from PLAYER.
 
@@ -9,7 +9,7 @@
 ```text
 WORLD/
 ├── World.tscn                         Reusable terrain preview scene
-├── WorldPreview.cs                     Worker queue, timed mesh setup, delayed physics, debug statistics
+├── WorldPreview.cs                     Bounded worker queue, regeneration, deferred deletion, mesh/collision timings
 ├── Configuration/
 │   ├── WorldSettings.cs                Shared settings: mesh step, collision range, performance warnings
 │   └── WorldMaster.tres                Inspector-editable default values
@@ -21,21 +21,34 @@ WORLD/
 │   └── WorldTerrain.gdshader          Grassy/rocky slope blend
 └── Debug/
     ├── WorldFlyCamera.cs               Free camera for test environment
-    └── WorldTestScene.cs               HUD output
+    └── WorldTestScene.cs               HUD, F1 runtime world-size and detail panel
 ```
 
 [SCENE/Scene_World.tscn](../SCENE/Scene_World.tscn) instances WORLD/World.tscn and **does not require PLAYER**.
 
 ### World size reference tree
 
-`SCENE/Scene_World.tscn` now contains **one test-only, ~14 m pine-shaped reference tree** directly ahead of the starting fly-camera view. The reusable prop is `WORLD/Debug/WorldScaleTree.tscn` with a tiny one-shot ground placement script (`WorldScaleTree.cs`). It queries the actual world height function at its x/z coordinates, sinks the trunk base 0.3 m, has **no collision**, no idle update and no dependencies on imported foliage assets. The tree helps judge the size of hills and the current **576×576 m** preview; it is **not** procedural forest spawning, nor a claim of final-quality vegetation. The instance now lives under **`Scene_World/WorldActorsRoot/DebugPropsRoot/ScalePine_14m`**, separate from generated terrain. To unplug it, **hide or delete that single node in `SCENE/Scene_World.tscn`**; the generator and `WORLD/World.tscn` will still function. The standalone model/script live in [`WORLD/Debug/WorldScaleTree.tscn`](Debug/WorldScaleTree.tscn) and [`WORLD/Debug/WorldScaleTree.cs`](Debug/WorldScaleTree.cs); delete these source files only if no other scene uses them. Its explicit `WorldNodePath = "../../../World"` resolves the reusable world after the category reparent.
+`SCENE/Scene_World.tscn` now contains **one test-only, ~14 m pine-shaped reference tree** directly ahead of the starting fly-camera view. The reusable prop is `WORLD/Debug/WorldScaleTree.tscn` with a tiny one-shot ground placement script (`WorldScaleTree.cs`). It queries the actual world height function at its x/z coordinates, sinks the trunk base 0.3 m, has **no collision**, no idle update and no dependencies on imported foliage assets. The tree helps judge the size of hills and the currently selected world extent; it is **not** procedural forest spawning, nor a claim of final-quality vegetation. The instance now lives under **`Scene_World/WorldActorsRoot/DebugPropsRoot/ScalePine_14m`**, separate from generated terrain. To unplug it, **hide or delete that single node in `SCENE/Scene_World.tscn`**; the generator and `WORLD/World.tscn` will still function. The standalone model/script live in [`WORLD/Debug/WorldScaleTree.tscn`](Debug/WorldScaleTree.tscn) and [`WORLD/Debug/WorldScaleTree.cs`](Debug/WorldScaleTree.cs); delete these source files only if no other scene uses them. Its explicit `WorldNodePath = "../../../World"` resolves the reusable world after the category reparent.
 
 ## Run and inspect
 
 1. Pull Ben Final, build C# in Godot 4.7.2 .NET, open `SCENE/Scene_World.tscn`, press **F6**.
-2. Fly using WASD/arrow keys, Q/E to descend/ascend, Shift to accelerate, mouse to look (inverted Y); Escape releases capture.
-3. HUD shows **chunks, triangles, CPU meshing, mesh setup, collision cooking, worst observed frame delta and spike count**. Godot **Output** prints one performance line per chunk, with separate lines for colliders and warnings.
-4. Edit `WORLD/Configuration/WorldMaster.tres` to change settings. Stop and restart F6 to regenerate; changes aren't live.
+2. Press **F1** to show/hide the **World Test** panel. F1 opens the mouse cursor for UI, and closes it to resume mouse-look. Select a **size preset**, optionally select uniform detail, and click **Regenerate world**.
+3. The scene removes prior terrain in frame-budgeted batches, cancels its old worker job, then generates the new terrain centre-outward. The stats HUD shows current extent, installed chunks, triangles, CPU/mesh/collision timings and limited spike diagnostics.
+4. Fly with WASD/arrow keys, Q/E height and Shift faster; Escape releases the mouse. Default free-fly speed is **60 m/s**, or **180 m/s with Shift**.
+5. For permanent startup defaults and geology, edit `WORLD/Configuration/WorldMaster.tres` before running F6. The F1 panel changes **runtime configuration only**; it does not save the resource.
+
+### F1 size and detail presets (current)
+
+| Preset | Radius | Chunk grid | Extent | Approx. ground area |
+| --- | ---: | ---: | ---: | ---: |
+| Small | 4 | 9×9 = 81 | 576×576 m | 0.33 km² |
+| Medium | 8 | 17×17 = 289 | 1,088×1,088 m | 1.18 km² |
+| **Large (default)** | **13** | **27×27 = 729** | **1,728×1,728 m** | **2.99 km²** |
+
+All presets retain **64 m per chunk** (`CellsPerChunk=32`, `CellSize=2 m`). Thus the large area is **nine times the former 576 m world area**, not nine times each linear dimension. `MeshStep=1` retains **2 m cell resolution**; choosing the lighter `MeshStep=2` samples every **4 m**, reducing polygons at the cost of nearby surface detail. Do not confuse this uniform detail choice with distance-LOD streaming.
+
+**Rebuild safety and limits:** only **one generator** may run at once; cancellation ignores stale mesh queues, at most **six completed CPU meshes** await installation, old chunk nodes are freed in batches of **12 per frame**, and mesh/collider creation is capped at **one operation per frame**. After the static preview completes, terrain processing stops. The **large preset intentionally retains all 729 meshes** after loading (no unloading) and may use considerable memory and take longer to finish. Try medium or lighter resolution if the GPU or editor struggles. F1 can be opened during generation; regeneration cancels/replaces pending work.
 
 ### BW-W3A terrain layout — new reference composition
 
@@ -61,13 +74,13 @@ The test camera starts near **(8, 63, 240)** looking toward **negative Z / north
 
 The mesher still samples **only cells around the surface**; it does not allocate an `81 × 300m` volumetric density grid. Raising the vertical range increases supported height **without making the horizontal chunks any larger**. The surface remains a height-derived density (`Height(x,z)-y`): steep mountain walls are possible, **true caves/overhangs are not**. Same-resolution seams still need checking.
 
-To test: build C#, F6 `SCENE/Scene_World.tscn`, let 81 chunks finish, fly from the meadow toward negative Z, and compare the ridge line from both aerial and low-altitude views. Check no flat-topped clipping, holes, major polygon spikes or collision errors; note the per-chunk CPU/mesh timing. Adjust `MountainAmplitude`, `PeakAmplitude`, `ValleyHalfWidth` and `PeakSharpness` one at a time. **Do not infer FPS improvement from the original small-world measurements:** this is a different seed-based terrain function with greater relief.
+To test: build C#, F6 `SCENE/Scene_World.tscn`, let the selected chunk count finish (729 by default), fly from the meadow toward negative Z, and compare the ridge line from both aerial and low-altitude views. Check no flat-topped clipping, holes, major polygon spikes or collision errors; note the per-chunk CPU/mesh timing. Adjust `MountainAmplitude`, `PeakAmplitude`, `ValleyHalfWidth` and `PeakSharpness` one at a time. **Do not infer FPS improvement from the original small-world measurements:** this is a different seed-based terrain function with greater relief.
 
 ### Recommended performance controls
 
 | Property | Default | Meaning |
 | --- | ---: | --- |
-| `ChunkRadius` | 4 | 9 × 9 (81) chunks. Valid range 0–5, maximum 11 × 11 for deliberate stress testing |
+| `ChunkRadius` | 13 | 27×27 (729) chunks. F1 provides radii 4, 8 and 13; resource supports 0–13 |
 | `CellsPerChunk` | 32 | Nominal cells along each chunk axis |
 | `CellSize` | 2.0 m | New large-world preset: 32 × 2 m = **64 m per chunk**, 9 × 64 m = **576 m across**. Earlier screenshot baseline used 1.0 m |
 | `MeshStep` | 1 | Current 2 m sampling; 2 = 4 m sampling; 4 = 8 m sampling. **Physical chunk width remains 64 m** |
@@ -82,10 +95,10 @@ The new mesher **reuses its already-computed surface heights for interior normal
 
 ### What was optimized
 
-- Terrain geometry is still generated by **one CPU worker** into a finite (at most 121 chunk) result queue, with no persistent streaming system. Chunks are generated **centre-outward** for useful near-camera content first.
+- Terrain geometry is generated by **one serialized CPU worker** into a **bounded six-mesh queue** with no persistent streaming. Chunks are generated **centre-outward** for useful near-camera content first, and old chunks are freed gradually during F1 regeneration.
 - **One main-thread operation per frame:** mesh setup and expensive trimesh collider creation are performed in separate frames, not together.
 - Collision defaults to the **centre chunk only**, avoiding the unnecessary static-physics setup for the eight surrounding demonstration chunks. Change the collision radius if you need to walk on surrounding chunks.
-- Each chunk prints **CPU generation and main-thread mesh setup** timings, vertex/triangle count and collision decision. Each collider prints separate cooking/setup time. The HUD summarizes totals/maxima.
+- The first few, last and any slow chunks print CPU/mesh timings and triangle count; slow collision work is also logged. The HUD summarizes totals/maxima without dumping 729 log lines.
 - Each individual operation can log a slow warning. **Observed frame delta** is sampled while constructing the static preview and for **30 additional frames** after the final chunk, then the world disables its processing. Spikes are tagged according to the preceding frame's mesh/collider/other activity as correlation clues **not proven causes**.
 - `MeshStep` gives a **fair same-area resolution comparison** rather than shrinking the world to reduce polygon count. Coarser steps may remove subtle ridges and are not claimed visually equivalent.
 
@@ -105,16 +118,16 @@ The original results below were obtained from a **3×3, 96×96 m** patch, not th
 
 Do **not** infer sustained FPS or mixed-resolution LOD correctness from this single comparison. LOD stitching and dynamic near/far chunk selection belong to **BW-W4**, and the coarser setting is currently uniform across all chunks.
 
-## Larger flyover experiment — configured, not yet measured
+## Larger flyover experiment — configured, not yet measured in new scale
 
-The default `WorldMaster.tres` now uses **ChunkRadius 4, CellsPerChunk 32, CellSize 2 m and MeshStep 1**, yielding a **576×576 m** patch composed of **81 visible 64-metre chunks**. The height-derived surface sampling now supports elevations between `TerrainBottomY = -16` m and `TerrainTopY = 300` m, independently from chunk width. It still cannot produce volumetric caves or overhangs. The fly camera now begins higher and farther away and moves at **28 m/s** (or **84 m/s with Shift**), with a farther clip plane.
+The default `WorldMaster.tres` now uses **ChunkRadius 13, CellsPerChunk 32, CellSize 2 m and MeshStep 1**, yielding **1,728×1,728 m** from **729 visible 64-metre chunks**. F1 also allows the prior 576-metre setting. The height-derived surface sampling now supports elevations between `TerrainBottomY = -16` m and `TerrainTopY = 300` m, independently from chunk width. It still cannot produce volumetric caves or overhangs. The fly camera moves at **60 m/s** (or **180 m/s with Shift**) and has a 2,600-metre far clip for the larger world.
 
-**Test:** Launch `SCENE/Scene_World.tscn` with F6; the scene should fill the nearby area first and attach all **81/81** chunks. Let the build finish, then fly across the middle, towards each edge and back. Inspect screenshot continuity, close-up terrain shape, any chunk holes and the Godot profiler's frame graph. Note total triangle count, CPU meshing, mesh/collision setup, spike correlation counters, and whether spikes persist **after loading**. The scene doesn't unload chunks when you move; it is **not a streaming benchmark**.
+**Test:** Launch `SCENE/Scene_World.tscn` with F6; the scene should fill the nearby area first and eventually attach **729/729** chunks by default. Let the build finish, then fly across the middle, towards each edge and back. Inspect screenshot continuity, close-up terrain shape, any chunk holes and the Godot profiler's frame graph. Note total triangle count, CPU meshing, mesh/collision setup, spike correlation counters, and whether spikes persist **after loading**. The scene doesn't unload chunks when you move; it is **not a streaming benchmark**.
 
-To test cheaper geometry across the *same* 576-metre patch, use `MeshStep=2` (4-metre sampling). It may visibly lose close-up detail; do not assume the previous 75% triangle reduction will yield the same timings. To avoid collisions slowing the flyover, keep `CollisionChunkRadius=0` (centre only) or set `GenerateCollision=false`.
+To test cheaper geometry across any one selected patch, use F1 to choose `MeshStep=2` (4-metre sampling), then regenerate. It may visibly lose close-up detail; do not assume the previous 75% triangle reduction will yield the same timings. To avoid collisions slowing the flyover, keep `CollisionChunkRadius=0` (centre only) or set `GenerateCollision=false`.
 
 ## Next validation
 
-Verify all **81** terrain chunks show the intended meadow/foothills/mountains without unexpected flat tops or missing cliff surfaces, preserve the earlier black-terrain winding/lighting fix, inspect same-resolution borders, confirm only the intended colliders exist, and check Godot **Output** for per-chunk timing warnings. Startup spikes may be acceptable for this static loading test; gameplay streaming stutter remains a future concern.
+Verify all **729** terrain chunks show the intended meadow/foothills/mountains without unexpected flat tops or missing cliff surfaces, preserve the earlier black-terrain winding/lighting fix, inspect same-resolution borders, confirm only the intended colliders exist, and check Godot **Output** for per-chunk timing warnings. Startup spikes may be acceptable for this static loading test; gameplay streaming stutter remains a future concern.
 
 The next unimplemented systems are true streaming/residency, distance-dependent LOD transition geometry, caves and vegetation. See [root roadmap](../README.md).

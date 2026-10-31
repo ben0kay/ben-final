@@ -2,7 +2,7 @@
 
 **Repository:** ben0kay/ben-final  
 **Engine:** Godot 4 .NET / C# (existing Ben Final project.godot preserved; C# support configured)  
-**Status:** Custom marching-cubes terrain and standalone FPS scene authored. The owner tested the original 96×96 m preview and mesh-step comparison. A new **576×576 m composed valley–foothill–jagged mountain landscape** (BW-W3A) is authored and awaits local visual/performance validation. True streaming, mixed-distance LOD and caves remain planned.
+**Status:** The owner tested the initial terrain and a 576×576 m composed mountain scene. The world test now defaults to **1,728×1,728 m (729 chunks)** and includes an **F1 size/detail selector with safe regeneration**; this much larger preset awaits local performance validation. True streaming, mixed-distance LOD and caves remain planned.
 
 ## Vision
 
@@ -17,7 +17,7 @@ Build each subsystem in its own scene and test environment; bring them together 
 | Development scene | Primary purpose | Dependencies |
 | --- | --- | --- |
 | **SCENE/Scene_Player.tscn** | Arrow-key FPS, inverted mouse look, RMB jump and right-Ctrl crouch | Instances reusable PLAYER/Player.tscn; graybox with collision (awaiting validation) |
-| **SCENE/Scene_World.tscn** | Static 9×9 marching-cubes geography (576×576 m): lowland valley, rolling foothills and far jagged peaks | Instances WORLD/World.tscn; no Player required; new geography awaits validation |
+| **SCENE/Scene_World.tscn** | Static 27×27 marching-cubes world (1,728×1,728 m) with F1 runtime size/detail presets, regeneration and fly camera | Instances WORLD/World.tscn; no Player required; expanded preset awaits local validation |
 | **SCENE/Scene_Buildings.tscn** | Buildings, interiors, doors, props, stairs, basements, collision | Building scenes and test ground |
 | **SCENE/Scene_AI.tscn** | Pathfinding, perception, investigation, combat and NPC simulation | AI actors, simple target/player stand-in, test geometry |
 | **SCENE/Scene_Game.tscn** | Eventually instantiate integrated World, Player, AI and UI | Only systems ready for integration |
@@ -144,7 +144,7 @@ These are **ownership concepts**, not nodes that must be created on day one. Kee
 - **[WORLD/WORLD_AUTHORING.md](WORLD/WORLD_AUTHORING.md)** — landscape goals; deterministic geography, marching cubes, vegetation, biomes, caves, chunk streaming, long-distance presentation, seams, performance and verification.
 - **[WORLD/README.md](WORLD/README.md)** — WORLD ownership, FPS-independent test controls, mesh-step/collision settings and the BW-W1 performance comparison procedure.
 - **[PLAYER/README.md](PLAYER/README.md)** — standalone player/FPS architecture and test-scene isolation.
-- **[SCENE/README.md](SCENE/README.md)** — test-room ownership, F6 run instructions and planned separate test scenes.
+- **[SCENE/README.md](SCENE/README.md)** — independent test-scene ownership, F6 and F1 regeneration controls.
 - **[ASSETS/README.md](ASSETS/README.md)** — imported model, texture and audio organization; source versus reusable scene prefabs.
 
 The terrain vision is **coherent large-scale geography**, not random noisy hills: grassy foregrounds, forested valleys, jagged distant mountain ranges, optional shorelines and snow at altitude. Marching cubes creates surfaces; separate geography, biome, materials, vegetation, water and atmospheric systems create the result. The world authoring file is the detailed guide.
@@ -155,7 +155,7 @@ The terrain vision is **coherent large-scale geography**, not random noisy hills
 | --- | --- | --- | --- |
 | **BW-00** | Repository and project foundation | Documentation and .NET project; local project.godot still needs a GitHub commit | **In Progress** |
 | **BW-W1** | Marching-cubes proof of concept | Surface density, indexed mesh, shared-height normals, separate mesh/collision timing, debug spike counters and resolution comparison | **Awaiting Validation** |
-| **BW-W2** | Adjacent chunk generation | Same-resolution chunks and centre-first static 9×9 preview; 576×576 m flyover awaiting local inspection and seam checks | **Awaiting Validation** |
+| **BW-W2** | Adjacent chunk generation | Static centre-out 9×9 / 17×17 / 27×27 chunk grids, F1 preset and regeneration; seams and large-world performance require validation | **Awaiting Validation** |
 | **BW-W3A** | Composed geography | Flat valley corridor, rolling foothills, far mountainous belt, jagged peaks and tunable vertical bounds; new owner test pending | **Awaiting Validation** |
 | **BW-W3B** | True 3D caves and overhangs | Full volumetric density, vertical chunk ownership, cave entrances, editable terrain and basements | **Planned** |
 | **BW-W4** | Streaming and LOD | Loading/unloading, distance LOD and transition geometry; initial preview has only a one-worker finite generation queue | **Planned** |
@@ -174,7 +174,7 @@ Advance to later milestones only after the previous implementation is reviewed. 
 
 ### BW-W1 performance comparison
 
-The original **96×96 m** pre-optimization screenshot recorded **21,308 triangles across nine chunks, 74.5 ms CPU meshing and 129.4 ms combined main-thread setup/collision work**. The updated test separates mesh and collision costs, restricts collision to the centre chunk by default, reports individual chunk timings, and offers `MeshStep = 1 / 2 / 4` with **identical physical chunk dimensions**. The new large-world preset uses **81 chunks (9×9), 64 metres each, for 576×576 m**; the earlier timings must not be compared directly to this larger configuration. These optimizations have **not yet been built or benchmarked locally**; follow [WORLD/README.md](WORLD/README.md) to run fair comparisons.
+The original **96×96 m** pre-optimization screenshot recorded **21,308 triangles across nine chunks, 74.5 ms CPU meshing and 129.4 ms combined main-thread setup/collision work**. The updated test separates mesh and collision costs, restricts collision to the centre chunk by default, reports individual chunk timings, and offers `MeshStep = 1 / 2 / 4` with **identical physical chunk dimensions**. The previous large-world preset used **81 chunks (9×9), 64 m each, or 576×576 m**. The current preset is **729 chunks (27×27), 64 m each, or 1,728×1,728 m**, nine times the land area without reducing sampling resolution. Earlier timings must not be compared directly to either larger configuration. These optimizations have **not yet been built or benchmarked locally**; follow [WORLD/README.md](WORLD/README.md) to run fair comparisons.
 
 ## Architecture and integration contracts
 
