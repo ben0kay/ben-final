@@ -74,7 +74,7 @@ MainGame
 
 ## Authoring references and folder names
 
-- For terrain, biomes, caves, shoreline, vegetation, chunk streaming, world LOD or procedural geography, read **[WORLD/WORLD_AUTHORING.md](WORLD/WORLD_AUTHORING.md)** before implementation; consult [WORLD/README.md](WORLD/README.md) for ownership.
+- For terrain, biomes, caves, shoreline, vegetation, chunk streaming, world LOD or procedural geography, read **[WORLD/WORLD_IMPLEMENTATION_PLAN.md](WORLD/WORLD_IMPLEMENTATION_PLAN.md)** for current benchmark evidence and prioritized implementation tickets, then **[WORLD/WORLD_AUTHORING.md](WORLD/WORLD_AUTHORING.md)** for design standards and [WORLD/README.md](WORLD/README.md) for operating instructions.
 - For FPS mechanics and reusable player scenes read **[PLAYER/README.md](PLAYER/README.md)**. Keep physical key/mouse bindings centralized in `PLAYER/Input/PlayerInput.cs`; movement and stance logic stay in `PLAYER/Movement/`. Independent test scenes belong in uppercase `SCENE/`.
 - For GLB/GLTF imports, source textures, audio and asset-facing wrappers read **[ASSETS/README.md](ASSETS/README.md)**.
 - The uppercase top-level names are intentional. Keep them exact across Git, paths and Godot references.

@@ -133,6 +133,7 @@ These are **ownership concepts**, not nodes that must be created on day one. Kee
 
 ## Authoring and ownership guides
 
+- **[WORLD/WORLD_IMPLEMENTATION_PLAN.md](WORLD/WORLD_IMPLEMENTATION_PLAN.md)** — current terrain implementation, verified user-run MeshStep 1/2 results, unresolved startup spikes and prioritized Codex continuation tickets.
 - **[WORLD/WORLD_AUTHORING.md](WORLD/WORLD_AUTHORING.md)** — landscape goals; deterministic geography, marching cubes, vegetation, biomes, caves, chunk streaming, long-distance presentation, seams, performance and verification.
 - **[WORLD/README.md](WORLD/README.md)** — WORLD ownership, FPS-independent test controls, mesh-step/collision settings and the BW-W1 performance comparison procedure.
 - **[PLAYER/README.md](PLAYER/README.md)** — standalone player/FPS architecture and test-scene isolation.

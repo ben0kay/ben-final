@@ -2,7 +2,7 @@
 
 **Status:** BW-W1 performance diagnostics and configurable mesh resolution authored; **awaiting Godot C# build and visual/performance validation**. The existing standalone terrain patch is still finite, not a streamed world.
 
-**Primary guide:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md). Keep generation, rendering, collisions, future vegetation and LOD under WORLD, separate from PLAYER.
+**Continuation plan:** [WORLD_IMPLEMENTATION_PLAN.md](WORLD_IMPLEMENTATION_PLAN.md) — owner-run benchmarks, findings, P0/P1/P2 work tickets and acceptance tests for Codex. **Authoring guide:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md). Keep generation, rendering, collisions, future vegetation and LOD under WORLD, separate from PLAYER.
 
 ## Source ownership
 
@@ -71,7 +71,9 @@ For a fair before/after and visual check, retain the same seed, camera, 3×3 gri
 4. To quantify the actual cost of collision, compare `CollisionChunkRadius = -1`, `0` and `1` **at the same mesh step**.
 5. Check Godot Profiler/frame graph while flying or starting the scene. Printed total milliseconds are **not FPS**; engine/GPU work may be deferred beyond `ArrayMesh` setup time.
 
-Do **not** assume any particular triangle reduction or FPS improvement until locally measured. LOD stitching and dynamic near/far chunk selection belong to **BW-W4**, and the coarser setting is currently uniform across all chunks.
+**Owner test update:** The latest two screenshot runs recorded **21,308 triangles / 19.8 ms CPU generation** at `MeshStep=1` versus **5,394 triangles / 7.8 ms** at `MeshStep=2` (same nine chunks; centre collider only). That's ~74.7% fewer triangles with broadly similar appearance in wide shots, but two frames still exceeded 33.3 ms in both runs and max frame deltas exceeded 100 ms. See [WORLD_IMPLEMENTATION_PLAN.md](WORLD_IMPLEMENTATION_PLAN.md) for full measured table, qualifications and next steps.
+
+Do **not** infer sustained FPS or mixed-resolution LOD correctness from this single comparison. LOD stitching and dynamic near/far chunk selection belong to **BW-W4**, and the coarser setting is currently uniform across all chunks.
 
 ## Next validation
 
