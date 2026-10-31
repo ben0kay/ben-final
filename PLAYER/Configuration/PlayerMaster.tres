@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="PlayerSettings" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://PLAYER/Configuration/PlayerSettings.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+WalkSpeed = 5.0
+SprintMultiplier = 1.6
+CrouchSpeedMultiplier = 0.45
+Acceleration = 35.0
+Deceleration = 45.0
+ReverseAcceleration = 50.0
+Gravity = 20.0
+JumpVelocity = 6.0
+StandingHeight = 1.8
+CrouchHeight = 1.2
+StandingEyeHeight = 1.65
+CrouchEyeHeight = 1.05
+StanceSpeed = 6.0
+MouseSensitivity = 0.1
+InvertMouseY = true
+MaximumPitch = 85.0

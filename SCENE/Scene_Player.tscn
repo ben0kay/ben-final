@@ -1,0 +1,151 @@
+[gd_scene load_steps=18 format=3]
+
+[ext_resource type="PackedScene" path="res://PLAYER/Player.tscn" id="1"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial"]
+sky_top_color = Color(0.32, 0.56, 0.78, 1)
+sky_horizon_color = Color(0.69, 0.81, 0.91, 1)
+ground_bottom_color = Color(0.26, 0.29, 0.3, 1)
+
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("SkyMaterial")
+
+[sub_resource type="Environment" id="Environment"]
+background_mode = 2
+sky = SubResource("Sky")
+ambient_light_source = 2
+reflected_light_source = 2
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="FloorMaterial"]
+albedo_color = Color(0.3, 0.38, 0.34, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="FloorMesh"]
+material = SubResource("FloorMaterial")
+size = Vector3(24, 1, 24)
+
+[sub_resource type="BoxShape3D" id="FloorShape"]
+size = Vector3(24, 1, 24)
+
+[sub_resource type="StandardMaterial3D" id="WallMaterial"]
+albedo_color = Color(0.52, 0.56, 0.6, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="LongWallMesh"]
+material = SubResource("WallMaterial")
+size = Vector3(24.6, 3.5, 0.5)
+
+[sub_resource type="BoxShape3D" id="LongWallShape"]
+size = Vector3(24.6, 3.5, 0.5)
+
+[sub_resource type="BoxMesh" id="SideWallMesh"]
+material = SubResource("WallMaterial")
+size = Vector3(0.5, 3.5, 24)
+
+[sub_resource type="BoxShape3D" id="SideWallShape"]
+size = Vector3(0.5, 3.5, 24)
+
+[sub_resource type="StandardMaterial3D" id="BlockMaterial"]
+albedo_color = Color(0.66, 0.45, 0.26, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BlockMesh"]
+material = SubResource("BlockMaterial")
+size = Vector3(2, 2, 2)
+
+[sub_resource type="BoxShape3D" id="BlockShape"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="BoxMesh" id="LowCeilingMesh"]
+material = SubResource("WallMaterial")
+size = Vector3(5, 0.3, 4)
+
+[sub_resource type="BoxShape3D" id="LowCeilingShape"]
+size = Vector3(5, 0.3, 4)
+
+[node name="Scene_Player" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.7, -0.8, 0)
+light_energy = 1.6
+shadow_enabled = true
+
+[node name="Floor" type="StaticBody3D" parent="."]
+position = Vector3(0, -0.5, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("FloorMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("FloorShape")
+
+[node name="BackWall" type="StaticBody3D" parent="."]
+position = Vector3(0, 1.75, -12.25)
+
+[node name="Mesh" type="MeshInstance3D" parent="BackWall"]
+mesh = SubResource("LongWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="BackWall"]
+shape = SubResource("LongWallShape")
+
+[node name="FrontWall" type="StaticBody3D" parent="."]
+position = Vector3(0, 1.75, 12.25)
+
+[node name="Mesh" type="MeshInstance3D" parent="FrontWall"]
+mesh = SubResource("LongWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="FrontWall"]
+shape = SubResource("LongWallShape")
+
+[node name="LeftWall" type="StaticBody3D" parent="."]
+position = Vector3(-12.25, 1.75, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="LeftWall"]
+mesh = SubResource("SideWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="LeftWall"]
+shape = SubResource("SideWallShape")
+
+[node name="RightWall" type="StaticBody3D" parent="."]
+position = Vector3(12.25, 1.75, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="RightWall"]
+mesh = SubResource("SideWallMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="RightWall"]
+shape = SubResource("SideWallShape")
+
+[node name="Obstacle" type="StaticBody3D" parent="."]
+position = Vector3(-4, 1, -3)
+
+[node name="Mesh" type="MeshInstance3D" parent="Obstacle"]
+mesh = SubResource("BlockMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacle"]
+shape = SubResource("BlockShape")
+
+[node name="LowCeiling" type="StaticBody3D" parent="."]
+position = Vector3(4, 1.6, -3)
+
+[node name="Mesh" type="MeshInstance3D" parent="LowCeiling"]
+mesh = SubResource("LowCeilingMesh")
+
+[node name="Collision" type="CollisionShape3D" parent="LowCeiling"]
+shape = SubResource("LowCeilingShape")
+
+[node name="Player" parent="." instance=ExtResource("1")]
+position = Vector3(0, 0.08, 5)
+
+[node name="ControlsHUD" type="CanvasLayer" parent="."]
+
+[node name="Controls" type="Label" parent="ControlsHUD"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 960.0
+offset_bottom = 78.0
+mouse_filter = 2
+text = "ARROWS: move    SHIFT: sprint    RMB: jump    RIGHT CTRL: crouch\nMOUSE: look (inverted Y)    ESC: release pointer    LEFT CLICK: recapture"
