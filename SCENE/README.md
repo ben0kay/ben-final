@@ -1,10 +1,15 @@
 # SCENE — Independent Test Worlds
 
-Test environments instance reusable feature scenes and **do not own gameplay code**.
+Test scenes instance reusable feature scenes; gameplay and generation code remain in their owning folders.
 
-- **[Scene_Player.tscn](Scene_Player.tscn)** — graybox FPS test room with a floor, four walls, collision obstacles, a low ceiling for crouch testing and an instanced `res://PLAYER/Player.tscn`. **Authored; awaiting local Godot validation.**
-- `Scene_World.tscn`, `Scene_Buildings.tscn`, `Scene_AI.tscn`, and `Scene_Game.tscn` — **planned**, not yet created.
+- **[Scene_Player.tscn](Scene_Player.tscn)** — graybox FPS room with an instanced `res://PLAYER/Player.tscn`; **awaiting local Godot validation**.
+- **[Scene_World.tscn](Scene_World.tscn)** — first custom marching-cubes terrain preview; 3×3 static chunks, sky/sun, free-flying debug camera, and generation statistics. Instances `res://WORLD/World.tscn`; **awaiting local Godot validation**.
+- `Scene_Buildings.tscn`, `Scene_AI.tscn`, `Scene_Game.tscn` — **planned**, not created.
 
-Build the C# project, open `Scene_Player.tscn` and press **F6** (Run Current Scene). To use F5 instead, set the main scene to `res://SCENE/Scene_Player.tscn` in your local Godot Project Settings. Input handling lives in `PLAYER/Input/PlayerInput.cs`, not in SCENE scripts.
+## Running the World preview
 
-**Note:** Ben Final already has a committed `project.godot`; this project keeps its original configuration while adding C# support.
+Build C# in Godot 4.7.2 .NET, open `SCENE/Scene_World.tscn` and press **F6**. Mouse looks around (inverted vertical by default); WASD/arrow keys fly, Q/E lower/raise, Shift moves faster, Escape releases the cursor and left click recaptures it.
+
+The test's generation settings are in `WORLD/Configuration/WorldMaster.tres`. All terrain code belongs to `WORLD/`; `PLAYER/` is not required for the world test.
+
+Use F6 for either independent test scene. To run either with F5, choose it in **Project Settings → Application → Run → Main Scene**. Keep the existing `project.godot` untouched otherwise.

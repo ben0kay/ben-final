@@ -1,0 +1,12 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://WORLD/WorldPreview.cs" id="1"]
+[ext_resource type="Resource" path="res://WORLD/Configuration/WorldMaster.tres" id="2"]
+[ext_resource type="Shader" path="res://WORLD/Materials/WorldTerrain.gdshader" id="3"]
+
+[node name="World" type="Node3D"]
+script = ExtResource("1")
+Settings = ExtResource("2")
+TerrainShader = ExtResource("3")
+
+[node name="TerrainRoot" type="Node3D" parent="."]

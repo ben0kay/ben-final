@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WorldSettings" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://WORLD/Configuration/WorldSettings.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+ChunkRadius = 1
+CellsPerChunk = 32
+CellSize = 1.0
+GenerateCollision = true
+Seed = 147
+BaseHeight = 14.0
+BroadAmplitude = 7.0
+DetailAmplitude = 2.0
+RidgeAmplitude = 6.0
