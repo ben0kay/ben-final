@@ -1,4 +1,4 @@
-// Bounded 3x3 preview: one pure managed mesher worker; separate main-thread mesh and physics work.
+// Finite procedural terrain preview: a CPU meshing worker, main-thread mesh/physics installation and profiling.
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -25,6 +25,10 @@ public partial class WorldPreview : Node3D
     private int _total, _attached, _colliders, _vertices, _triangles, _frameSpikes;
     private double _cpuTotalMs, _cpuMaxMs, _meshTotalMs, _meshMaxMs;
     private double _collisionTotalMs, _collisionMaxMs, _maxObservedFrameMs;
+    private int _spikesAfterMesh, _spikesAfterCollision, _spikesOther, _postLoadFrames;
+    // A frame's delta reflects elapsed time since the preceding frame, not this frame's new work.
+    // Tagging the previous frame's operation is a correlation clue, not a proven root cause.
+    private string _previousFrameWork = "startup/idle";
 
     // Collision is deferred until a different frame from its mesh creation.
     private readonly record struct PendingCollision(ArrayMesh Mesh, Node3D Chunk, int X, int Z);
@@ -57,9 +61,13 @@ public partial class WorldPreview : Node3D
     private void GenerateTerrain(TerrainParameters config, CancellationToken cancel)
     {
         var density = new DensityGenerator(config);
-        for (int x = -config.ChunkRadius; x <= config.ChunkRadius; x++)
-        for (int z = -config.ChunkRadius; z <= config.ChunkRadius; z++)
+        // Centre-out rings give the free camera usable nearby geometry before the distant edges.
+        // Total pending results are bounded by the selected finite radius (max 11x11 chunks).
+        for (int ring = 0; ring <= config.ChunkRadius; ring++)
+        for (int x = -ring; x <= ring; x++)
+        for (int z = -ring; z <= ring; z++)
         {
+            if (Math.Max(Math.Abs(x), Math.Abs(z)) != ring) continue;
             if (cancel.IsCancellationRequested) return;
             var timer = Stopwatch.StartNew();
             TerrainChunkData data = MarchingCubesMesher.Build(config, density, x, z);
@@ -81,9 +89,12 @@ public partial class WorldPreview : Node3D
         {
             _frameSpikes++;
             diagnosticsChanged = true;
-            if (_frameSpikes <= 5)
+            if (_previousFrameWork == "mesh") _spikesAfterMesh++;
+            else if (_previousFrameWork == "collision") _spikesAfterCollision++;
+            else _spikesOther++;
+            if (_frameSpikes <= 8)
                 GD.Print($"[WORLD PERF] Frame delta spike: {frameMilliseconds:F2} ms " +
-                    $"(threshold {_parameters.FrameSpikeThresholdMs:F1} ms, " +
+                    $"(previous frame operation: {_previousFrameWork}; correlation is NOT causation, " +
                     $"meshes {_attached}/{_total}, colliders {_colliders}).");
         }
 
@@ -98,10 +109,11 @@ public partial class WorldPreview : Node3D
 
         try
         {
+            _previousFrameWork = "idle";
             if (_completed.TryDequeue(out TerrainChunkData? data))
-            { InstallMesh(data); diagnosticsChanged = true; }
+            { InstallMesh(data); _previousFrameWork = "mesh"; diagnosticsChanged = true; }
             else if (_pendingCollisions.Count > 0)
-            { InstallCollision(_pendingCollisions.Dequeue()); diagnosticsChanged = true; }
+            { InstallCollision(_pendingCollisions.Dequeue()); _previousFrameWork = "collision"; diagnosticsChanged = true; }
         }
         catch (Exception error)
         {
@@ -115,9 +127,15 @@ public partial class WorldPreview : Node3D
 
         if (_generator is { IsCompleted: true } && _completed.IsEmpty && _pendingCollisions.Count == 0)
         {
-            PublishStatus(); // Capture the last observed delta before stopping forever.
-            GD.Print("[WORLD PERF] FINAL: " + StatusText.Replace("\n", " | "));
-            SetProcess(false);
+            // Observe a short tail after the final collider/mesh work; otherwise the final
+            // operation's following frame cannot be counted. Stop automatically once sampled.
+            _postLoadFrames++;
+            if (_postLoadFrames >= 30)
+            {
+                PublishStatus();
+                GD.Print("[WORLD PERF] FINAL: " + StatusText.Replace("\n", " | "));
+                SetProcess(false);
+            }
         }
     }
 
@@ -209,14 +227,18 @@ public partial class WorldPreview : Node3D
     {
         string collisionMode = !_parameters.GenerateCollision || _parameters.CollisionChunkRadius < 0
             ? "none" : $"radius {_parameters.CollisionChunkRadius}";
+        float width = _parameters.ChunkWidth * (2 * _parameters.ChunkRadius + 1);
         StatusText =
+            $"Area: {width:F0} x {width:F0} m | Grid: {2 * _parameters.ChunkRadius + 1} x {2 * _parameters.ChunkRadius + 1} chunks\n" +
             $"Chunks: {_attached}/{_total} | Colliders: {_colliders} ({collisionMode}) | mesh step {_parameters.MeshStep}\n" +
             $"Vertices: {_vertices}   Triangles: {_triangles}\n" +
             $"CPU meshing: {_cpuTotalMs:F1} ms (max chunk {_cpuMaxMs:F1})\n" +
             $"Mesh setup: {_meshTotalMs:F1} ms (max chunk {_meshMaxMs:F1})\n" +
             $"Collision cook: {_collisionTotalMs:F1} ms (max chunk {_collisionMaxMs:F1})\n" +
             $"Max observed frame delta: {_maxObservedFrameMs:F1} ms | " +
-            $">={_parameters.FrameSpikeThresholdMs:F1} ms spikes: {_frameSpikes}";
+            $">={_parameters.FrameSpikeThresholdMs:F1} ms spikes: {_frameSpikes}\n" +
+            $"Spike correlations: prior mesh {_spikesAfterMesh}, collider {_spikesAfterCollision}, " +
+            $"other/startup {_spikesOther}";
         StatisticsChanged?.Invoke(StatusText);
     }
     #endregion

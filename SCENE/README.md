@@ -3,7 +3,7 @@
 Test scenes instance reusable feature scenes; gameplay and generation code remain in their owning folders.
 
 - **[Scene_Player.tscn](Scene_Player.tscn)** — graybox FPS room with an instanced `res://PLAYER/Player.tscn`; **awaiting local Godot validation**.
-- **[Scene_World.tscn](Scene_World.tscn)** — marching-cubes terrain preview; 3×3 static chunks, sky/sun, free-flying debug camera and separated CPU/mesh/collision timing. Mesh resolution and collision radius can be configured in WORLD/Configuration/WorldMaster.tres; **optimization pass awaiting local validation**.
+- **[Scene_World.tscn](Scene_World.tscn)** — marching-cubes terrain preview; **9×9 static chunks spanning 576×576 m**, sky/sun, faster free-flying debug camera and separated CPU/mesh/collision timing. Mesh resolution, chunk radius and collision range are in WORLD/Configuration/WorldMaster.tres; **larger preview awaiting local validation**.
 - `Scene_Buildings.tscn`, `Scene_AI.tscn`, `Scene_Game.tscn` — **planned**, not created.
 
 ## Running the World preview

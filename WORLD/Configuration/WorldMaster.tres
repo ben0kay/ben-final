@@ -4,9 +4,9 @@
 
 [resource]
 script = ExtResource("1")
-ChunkRadius = 1
+ChunkRadius = 4
 CellsPerChunk = 32
-CellSize = 1.0
+CellSize = 2.0
 GenerateCollision = true
 CollisionChunkRadius = 0
 MeshStep = 1

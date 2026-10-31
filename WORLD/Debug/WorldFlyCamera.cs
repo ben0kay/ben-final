@@ -3,7 +3,7 @@ using Godot;
 
 public partial class WorldFlyCamera : Camera3D
 {
-    [Export] public float FlySpeed { get; set; } = 15f;
+    [Export] public float FlySpeed { get; set; } = 28f;
     [Export] public float FastMultiplier { get; set; } = 3f;
     [Export] public float MouseSensitivity { get; set; } = 0.12f;
     [Export] public bool InvertMouseY { get; set; } = true;

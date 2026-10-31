@@ -4,7 +4,7 @@
 >
 > **Repository:** `ben0kay/ben-final` — current development branch `main`.
 > **Last documented user tests:** October 30, 2026 (Godot 4.7.2 .NET, screenshots supplied in chat).
-> **State:** Working visual static marching-cubes preview; generation and performance diagnostics run successfully on the owner's PC. Dynamic streaming, distance LOD, caves, vegetation, persistence and a production-scale world are **not implemented**.
+> **State:** Original 96×96 m visual marching-cubes preview and mesh-resolution benchmarks were run on the owner's PC. An expanded **576×576 m static flyover** (81 chunks) is now authored but **has not been run/benchmarked by the owner yet**. Dynamic streaming, distance LOD, caves, vegetation, persistence and a production-scale world are **not implemented**.
 >
 > **Companion documents:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md) explains the intended geology/terrain techniques; [README.md](README.md) explains existing files and how to run them; [root README](../README.md) tracks the project's milestone statuses; [CodePreferences](../CodePreferences.md) and [AGENTS](../AGENTS.md) govern coding and Git practice.
 
@@ -33,19 +33,19 @@ Engineering rules:
 | World-space seeded terrain shaping | `WORLD/Generation/DensityGenerator.cs` | **Implemented**; currently **height-derived density** `Height(x,z)-y`, not volumetric caves |
 | Classic indexed marching cubes | `WORLD/Generation/MarchingCubesMesher.cs` | **Implemented and visually working** on nine equal-resolution chunks; indexed shared-edge vertices and reuse of precomputed heights for normals |
 | Grass/rock color material | `WORLD/Materials/WorldTerrain.gdshader` | **Visually visible**, but deliberately basic; not the final terrain art |
-| Fixed terrain patch and asynchronous CPU generation | `WORLD/WorldPreview.cs` | **Implemented**, one managed worker calculates chunk mesh data; one mesh or collider operation per main-thread frame |
+| Fixed terrain patch and asynchronous CPU generation | `WORLD/WorldPreview.cs` | **Implemented**, one managed worker calculates chunk mesh data centre-first; one mesh or collider operation per main-thread frame. **Expanded 9×9 preset awaits validation** |
 | Optional physics in nearby chunks | `WORLD/WorldPreview.cs`, `WORLD/Configuration/WorldMaster.tres` | **Implemented**, default one centre-chunk collider; **walking/collision accuracy not yet validated** |
 | Inspector settings | `WORLD/Configuration/WorldSettings.cs`, `WorldMaster.tres` | **Implemented**: seed, geography amplitudes, chunk size, mesh step, collider radius, debug thresholds |
-| Generation statistics | `WORLD/WorldPreview.cs`, `WORLD/Debug/WorldTestScene.cs` | **Runs locally**: mesh/physics timing, per-chunk logs, max observed frame delta and spike count |
+| Generation statistics | `WORLD/WorldPreview.cs`, `WORLD/Debug/WorldTestScene.cs` | **Runs locally** in earlier small test: mesh/physics timing and spike count. Expanded test adds preceding-frame operation correlation and 30 post-load diagnostic frames; **not yet verified** |
 | Continuous terrain streaming / unload | — | **Not implemented**; all requested chunks are generated once, remain in memory |
 | Distance-dependent mesh LOD and stitching | — | **Not implemented**; `MeshStep` is one uniform global resolution for the entire test patch |
 | 3D cave/overhang editing, save state, forest, water | — | **Not implemented** |
 
-**Current preview configuration:** `ChunkRadius=1` produces **3×3 = 9 chunks** (not 9×9); `CellsPerChunk=32`, `CellSize=1 m` yields **32×32 m per chunk** and a **96×96 m horizontal patch**. The test's 32-metre vertical sampling volume is anchored from y=0 and may clip surfaces outside it; do not treat this as a general-purpose vertical chunk system. `MeshStep=1` by default; `2` and `4` reduce the cells sampled **within the same physical area**. `CollisionChunkRadius=0` means centre chunk only (a square/Chebyshev distance selection, not true radial streaming).
+**Current configured larger flyover (awaiting validation):** `ChunkRadius=4` produces **9×9 = 81 chunks**; `CellsPerChunk=32`, `CellSize=2 m` yields **64×64 m chunks** and a **576×576 m horizontal patch**. Nominal vertical coverage is **y=0 to 64 m**; heights outside the volume can be clipped. Default `MeshStep=1` samples every **2 m** and steps 2/4 sample every **4/8 m**. `CollisionChunkRadius=0` means the centre chunk only, **not proximity-based streaming**. The worker generates chunks centre-outward; they are all retained after loading. Restore `ChunkRadius=1` and `CellSize=1 m` for historical 96 m measurements.
 
 ## 3. Observed performance — preserve these benchmarks
 
-These numbers are from **user-run screenshots in Godot**, not independent automated benchmarks. They use the same nine-chunk preview and nominally identical generation settings. The screenshots are from slightly different viewpoints, so near/far visual equivalence is not rigorously established.
+These numbers are **historical user-run screenshots from the original 96×96 m nine-chunk preview**, not independent automated benchmarks or results for the new 576×576 m configuration. The two runs used nominally identical generation settings. The screenshots are from slightly different viewpoints, so near/far visual equivalence is not rigorously established.
 
 | Observed measurement | MeshStep 1 | MeshStep 2 | Interpretation |
 | --- | ---: | ---: | --- |
@@ -77,7 +77,17 @@ Prior to the first performance instrumentation pass, the original nine-chunk scr
 
 These tickets specify **recommended next tasks**, not permission to implement all of them in one change. Keep one authorized ticket per reviewable commit, update this plan with measured outcomes, and retain the independent `Scene_World` test.
 
-### BW-W1.1 — Explain startup frame spikes (NEXT; P0)
+### BW-W1.0b — Large static flyover checkpoint (CURRENT TEST; P0)
+
+**Goal:** Exercise 81 visible chunks over **576×576 m** without prematurely introducing streaming or mixed-resolution LOD.
+
+- Preset is now `ChunkRadius=4`, `CellsPerChunk=32`, `CellSize=2`, `MeshStep=1`, centre-only collision. `SCENE/Scene_World.tscn` uses a raised, farther-reaching camera and faster free-fly movement.
+- Worker generates concentric/square centre-out rings, so nearby chunks appear first. The scene still retains all 81 chunks and has **no dynamic unload/reload**.
+- The debug HUD shows area, loaded chunks, timing and frame-spike counts; startup spikes print the previous frame operation (mesh/collider/idle). This is **correlation, not causation**. It also observes 30 extra frames after loading, then sleeps.
+- **Acceptance:** In Godot 4 .NET, reach 81/81 chunks; fly across the middle, boundaries and far edges without holes or sustained FPS collapse. Record generation/setup/collision totals, peak frame delta, spike correlations, memory and editor/standalone conditions. Restore old settings for historical benchmark comparisons.
+- **Status: Authored, awaiting owner run and FPS validation.**
+
+### BW-W1.1 — Explain startup frame spikes (NEXT DIAGNOSTIC; P0)
 
 **Goal:** Determine why the preview's max observed frame delta remains 116–127 ms even when CPU meshing and mesh setup totals are much smaller.
 

@@ -2,7 +2,7 @@
 
 **Repository:** ben0kay/ben-final  
 **Engine:** Godot 4 .NET / C# (existing Ben Final project.godot preserved; C# support configured)  
-**Status:** Initial FPS controller and independent marching-cubes WORLD preview authored; BW-W1 performance instrumentation and same-area mesh-resolution comparison added. Local Godot build and performance validation remain pending. Streaming, dynamic LOD and caves remain planned.
+**Status:** First custom terrain preview and FPS test authored. Owner tested the original 96×96 m terrain and MeshStep comparison; the expanded **576×576 m static flyover** is now configured and awaits local testing. True streaming, distance LOD and caves remain planned.
 
 ## Vision
 
@@ -17,7 +17,7 @@ Build each subsystem in its own scene and test environment; bring them together 
 | Development scene | Primary purpose | Dependencies |
 | --- | --- | --- |
 | **SCENE/Scene_Player.tscn** | Arrow-key FPS, inverted mouse look, RMB jump and right-Ctrl crouch | Instances reusable PLAYER/Player.tscn; graybox with collision (awaiting validation) |
-| **SCENE/Scene_World.tscn** | Static 3×3 marching-cubes hills, generation timing and free-fly camera (first pass) | Instances WORLD/World.tscn; does not require Player; awaiting validation |
+| **SCENE/Scene_World.tscn** | Static 9×9 marching-cubes hills (576×576 m), generation timing and faster free-fly camera | Instances WORLD/World.tscn; does not require Player; expanded size awaits validation |
 | **SCENE/Scene_Buildings.tscn** | Buildings, interiors, doors, props, stairs, basements, collision | Building scenes and test ground |
 | **SCENE/Scene_AI.tscn** | Pathfinding, perception, investigation, combat and NPC simulation | AI actors, simple target/player stand-in, test geometry |
 | **SCENE/Scene_Game.tscn** | Eventually instantiate integrated World, Player, AI and UI | Only systems ready for integration |
@@ -37,7 +37,7 @@ ben-final/
 ├── SCENE/                      [created]
 │   ├── README.md               [created]
 │   ├── Scene_Player.tscn       [created]
-│   ├── Scene_World.tscn        [planned]
+│   ├── Scene_World.tscn        [created — large static flyover]
 │   ├── Scene_Buildings.tscn    [planned]
 │   ├── Scene_AI.tscn           [planned]
 │   └── Scene_Game.tscn         [planned]
@@ -58,11 +58,18 @@ ben-final/
 ├── WORLD/                      [created]
 │   ├── README.md                [created]
 │   ├── WORLD_AUTHORING.md       [created]
-│   ├── World.tscn               [planned]
-│   ├── Generation/              [planned]
-│   │   ├── DensityGenerator.cs  [planned]
-│   │   ├── MarchingCubes.cs     [planned]
+│   ├── WORLD_IMPLEMENTATION_PLAN.md [created]
+│   ├── World.tscn               [created]
+│   ├── WorldPreview.cs          [created]
+│   ├── Generation/              [created]
+│   │   ├── DensityGenerator.cs  [created]
+│   │   ├── MarchingCubesMesher.cs [created]
 │   │   └── BiomeGenerator.cs    [planned]
+│   ├── Configuration/           [created]
+│   │   ├── WorldSettings.cs     [created]
+│   │   └── WorldMaster.tres     [created]
+│   ├── Debug/                   [created]
+│   ├── Materials/               [created]
 │   ├── Streaming/               [planned]
 │   │   ├── ChunkManager.cs      [planned]
 │   │   └── TerrainLOD.cs        [planned]
@@ -148,7 +155,7 @@ The terrain vision is **coherent large-scale geography**, not random noisy hills
 | --- | --- | --- | --- |
 | **BW-00** | Repository and project foundation | Documentation and .NET project; local project.godot still needs a GitHub commit | **In Progress** |
 | **BW-W1** | Marching-cubes proof of concept | Surface density, indexed mesh, shared-height normals, separate mesh/collision timing, debug spike counters and resolution comparison | **Awaiting Validation** |
-| **BW-W2** | Adjacent chunk generation | Bounded 3×3 static patch; world-space sampling and matched boundaries with adjustable uniform mesh step, seam check pending | **Awaiting Validation** |
+| **BW-W2** | Adjacent chunk generation | Same-resolution chunks and centre-first static 9×9 preview; 576×576 m flyover awaiting local inspection and seam checks | **Awaiting Validation** |
 | **BW-W3** | Natural geography and caves | Coherent terrain regions, height variation, ridges, density shaping, cliffs, caves, overhangs and tunable seed | **Planned** |
 | **BW-W4** | Streaming and LOD | Loading/unloading, distance LOD and transition geometry; initial preview has only a one-worker finite generation queue | **Planned** |
 | **BW-W5** | Forest and atmosphere pass | Terrain materials, grass, pine trees, vegetation LOD/instancing, lighting/fog | **Planned** |
@@ -166,7 +173,7 @@ Advance to later milestones only after the previous implementation is reviewed. 
 
 ### BW-W1 performance comparison
 
-The pre-optimization screenshot recorded **21,308 triangles across nine chunks, 74.5 ms CPU meshing and 129.4 ms combined main-thread setup/collision work**. The new test separates mesh and collision costs, restricts collision to the centre chunk by default, reports individual chunk timings, and offers `MeshStep = 1 / 2 / 4` with **identical physical chunk dimensions**. These optimizations have **not yet been built or benchmarked locally**; follow [WORLD/README.md](WORLD/README.md) to run fair comparisons.
+The original **96×96 m** pre-optimization screenshot recorded **21,308 triangles across nine chunks, 74.5 ms CPU meshing and 129.4 ms combined main-thread setup/collision work**. The updated test separates mesh and collision costs, restricts collision to the centre chunk by default, reports individual chunk timings, and offers `MeshStep = 1 / 2 / 4` with **identical physical chunk dimensions**. The new large-world preset uses **81 chunks (9×9), 64 metres each, for 576×576 m**; the earlier timings must not be compared directly to this larger configuration. These optimizations have **not yet been built or benchmarked locally**; follow [WORLD/README.md](WORLD/README.md) to run fair comparisons.
 
 ## Architecture and integration contracts
 

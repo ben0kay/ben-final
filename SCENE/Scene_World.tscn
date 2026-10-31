@@ -33,11 +33,11 @@ shadow_enabled = true
 [node name="World" parent="." instance=ExtResource("1")]
 
 [node name="DebugCamera" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.906308, -0.422618, 0, 0.422618, 0.906308, 16, 36, 78)
+transform = Transform3D(1, 0, 0, 0, 0.906308, -0.422618, 0, 0.422618, 0.906308, 8, 62, 180)
 script = ExtResource("2")
 current = true
 fov = 78.0
-far = 600.0
+far = 1100.0
 
 [node name="DebugHUD" type="CanvasLayer" parent="."]
 
@@ -53,6 +53,6 @@ text = "WORLD TEST | WASD / ARROWS: fly   Q/E: down/up   SHIFT: faster\nMOUSE: l
 offset_left = 15.0
 offset_top = 82.0
 offset_right = 600.0
-offset_bottom = 260.0
+offset_bottom = 305.0
 mouse_filter = 2
 text = "Preparing terrain..."
