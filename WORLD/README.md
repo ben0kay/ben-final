@@ -1,60 +1,80 @@
 # WORLD — Procedural World Preview
 
-**Status:** BW-W1 / BW-W2 first-pass implementation authored. **Awaiting local Godot C# build, visual inspection and collision/seam validation.** This is a finite preview, **not** terrain streaming, LOD or a cave system.
+**Status:** BW-W1 performance diagnostics and configurable mesh resolution authored; **awaiting Godot C# build and visual/performance validation**. The existing standalone terrain patch is still finite, not a streamed world.
 
-**Primary guide:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md). Follow it for terrain, biome, cave, streaming, chunk LOD, vegetation, water and longer-term geography work.
+**Primary guide:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md). Keep generation, rendering, collisions, future vegetation and LOD under WORLD, separate from PLAYER.
 
-## Working preview files
+## Source ownership
 
 ```text
 WORLD/
 ├── World.tscn                         Reusable terrain preview scene
-├── WorldPreview.cs                     Generation queue, main-thread mesh/collider installation, statistics
+├── WorldPreview.cs                     Worker queue, timed mesh setup, delayed physics, debug statistics
 ├── Configuration/
-│   ├── WorldSettings.cs                Inspector parameters (seed, size, resolution, amplitude)
-│   └── WorldMaster.tres                Default settings
+│   ├── WorldSettings.cs                Shared settings: mesh step, collision range, performance warnings
+│   └── WorldMaster.tres                Inspector-editable default values
 ├── Generation/
-│   ├── DensityGenerator.cs             Deterministic, seamless managed height-derived density
-│   ├── MarchingCubesMesher.cs          Indexed 256-case classic marching cubes
-│   └── LOOKUP_TABLE_LICENSE.md        Triangulation-table attribution
+│   ├── DensityGenerator.cs             Seeded world-space geography, height-derived density
+│   ├── MarchingCubesMesher.cs          Indexed marching cubes with reused gradient height samples
+│   └── LOOKUP_TABLE_LICENSE.md        Original table attribution
 ├── Materials/
-│   └── WorldTerrain.gdshader          Lightweight grass/rock slope blend
+│   └── WorldTerrain.gdshader          Grassy/rocky slope blend
 └── Debug/
-    ├── WorldFlyCamera.cs               Independent, keyboard/mouse free camera
-    └── WorldTestScene.cs               HUD statistics adapter
+    ├── WorldFlyCamera.cs               Free camera for test environment
+    └── WorldTestScene.cs               HUD output
 ```
 
-The test environment is [SCENE/Scene_World.tscn](../SCENE/Scene_World.tscn). It instances `WORLD/World.tscn`; **PLAYER is not involved**.
+[SCENE/Scene_World.tscn](../SCENE/Scene_World.tscn) instances WORLD/World.tscn and **does not require PLAYER**.
 
-## Run it
+## Run and inspect
 
-1. Pull the latest Ben Final commit, then build C# in Godot 4.7.2 .NET.
-2. Open `SCENE/Scene_World.tscn` and press **F6** (Run Current Scene). This doesn't replace the F5 main scene.
-3. Look around with the **mouse** (vertical inverted by default). **WASD or arrow keys** fly; **Q/E** descend/ascend; hold **Shift** for faster flight. **Escape** releases the mouse and left-click recaptures.
-4. Watch the top-left live counters: attached chunks, total vertices/triangles, cumulative CPU generation milliseconds, cumulative main-thread mesh/collision upload milliseconds.
-5. Select `WORLD/Configuration/WorldMaster.tres` in the Inspector to change seed, terrain height/roughness, number of chunks and resolution; run the scene again to regenerate.
+1. Pull Ben Final, build C# in Godot 4.7.2 .NET, open `SCENE/Scene_World.tscn`, press **F6**.
+2. Fly using WASD/arrow keys, Q/E to descend/ascend, Shift to accelerate, mouse to look (inverted Y); Escape releases capture.
+3. HUD shows **chunks, triangles, CPU meshing, mesh setup, collision cooking, worst observed frame delta and spike count**. Godot **Output** prints one performance line per chunk, with separate lines for colliders and warnings.
+4. Edit `WORLD/Configuration/WorldMaster.tres` to change settings. Stop and restart F6 to regenerate; changes aren't live.
 
-### Initial settings
+### Recommended performance controls
 
-- 3×3 chunks (`ChunkRadius = 1`); 32 metres wide per chunk (`CellsPerChunk = 32`, `CellSize = 1`), a **96×96 m** patch.
-- Each chunk is a 32³ bounded volume; height-derived density is sampled per x/z column and only surface-crossing vertical cells are meshed.
-- Positive density means solid; negative means air. Surface normals derive from world-space gradients.
-- One managed worker **sequentially** generates CPU-only chunk data. The Godot main thread attaches at most **one finished chunk per frame**, with optional trimesh collision (default on).
-- Every chunk becomes dormant after it is attached; the world polling callback also disables itself after all nine chunks are installed.
-- No terrain plugin, player dependency, foliage, caves, persistence, dynamic streaming, scene-wide LOD or terrain edits.
+| Property | Default | Meaning |
+| --- | ---: | --- |
+| `ChunkRadius` | 1 | 3 × 3 visible chunks. Can expand to 5 × 5 for stress checks |
+| `CellsPerChunk` | 32 | Nominal cells along each chunk axis |
+| `CellSize` | 1.0 m | Original sample spacing. Combined with CellsPerChunk sets **physical chunk width** |
+| `MeshStep` | 1 | 1 = original sampling; 2 = half samples along each axis (2 m spacing at default); 4 = quarter samples (4 m spacing). **Chunk width remains unchanged** |
+| `GenerateCollision` | true | Global physics switch |
+| `CollisionChunkRadius` | 0 | -1 = none; 0 = central chunk only; 1 = central 3 × 3 square; 2 = 5 × 5 if present |
+| `MainThreadWarningMs` | 8.0 ms | Logs individual mesh/collision setup work exceeding threshold |
+| `FrameSpikeThresholdMs` | 33.3 ms | Counts frame deltas at or above threshold **during the preview build** |
 
-### Performance caveats
+If a requested `MeshStep` does not evenly divide `CellsPerChunk`, it falls back to step 1 instead of creating a different-width or cracked chunk. Use 32 cells when comparing 1, 2 and 4.
 
-Generation timings are **not frame times or FPS measurements**. A chunk's ArrayMesh upload and collision creation can still cause a frame spike; future phases should measure that separately before scaling up. The current implementation uses classic marching-cubes cases, which are not ambiguity-safe for complex cave topology; that is a later engineering stage.
+The new mesher **reuses its already-computed surface heights for interior normals** rather than recomputing four noisy height evaluations for every sample. Boundary points still sample outside their chunk so normals agree across same-resolution neighbours. The old indexed-vertex cache and geometric winding are preserved.
 
-The custom terrain material is deliberately minimal and **does not represent the final mountain/forest look**. It's an algorithm test with a simple grassy/rocky hillside.
+### What was optimized
 
-## Roadmap
+- Terrain geometry is still generated by **one bounded CPU worker**, no additional thread pool or stream logic.
+- **One main-thread operation per frame:** mesh setup and expensive trimesh collider creation are performed in separate frames, not together.
+- Collision defaults to the **centre chunk only**, avoiding the unnecessary static-physics setup for the eight surrounding demonstration chunks. Change the collision radius if you need to walk on surrounding chunks.
+- Each chunk prints **CPU generation and main-thread mesh setup** timings, vertex/triangle count and collision decision. Each collider prints separate cooking/setup time. The HUD summarizes totals/maxima.
+- Each individual operation can log a slow warning. **Observed frame delta** is sampled only while the preview is building; it is diagnostic, not a continuous profiler.
+- `MeshStep` gives a **fair same-area resolution comparison** rather than shrinking the world to reduce polygon count. Coarser steps may remove subtle ridges and are not claimed visually equivalent.
 
-1. **BW-W1:** after the initial black-terrain report, the triangle winding and sky ambient source were corrected. Inspect that geometry is green/rocky, shading is correctly oriented, and collision behaves. **Local validation pending.**
-2. **BW-W2:** inspect same-LOD chunk seams and normal continuity across borders.
-3. **BW-W3:** richer geography, rock cliffs and volumetric cave features (after verifying 3D density).
-4. **BW-W4:** true chunk residency, worker budgets, LOD and crack-free transitions.
-5. **BW-W5:** materials, grass/trees, world biomes, water and atmospheric distance rendering.
+### Baseline and comparison procedure
 
-For code conventions and independent world/test-scene ownership, read [root README](../README.md), [AGENTS](../AGENTS.md), and [CodePreferences](../CodePreferences.md).
+The user’s **pre-optimization** screenshot (before this change) reported **9/9 chunks, 11,294 vertices, 21,308 triangles, 74.5 ms total CPU meshing and 129.4 ms combined main-thread mesh/collision work**. Those numbers don't distinguish setup from physics, and **cannot be used as the after measurement**.
+
+For a fair before/after and visual check, retain the same seed, camera, 3×3 grid and physical chunk width:
+
+1. Run `MeshStep = 1` with `CollisionChunkRadius = 0` and record triangle count, CPU generation, mesh setup and collision totals.
+2. Change only `MeshStep = 2`, rerun, compare timing, triangle totals and screenshots at the same camera position.
+3. Optionally test `MeshStep = 4`; check hill silhouettes and whether the ground looks too faceted.
+4. To quantify the actual cost of collision, compare `CollisionChunkRadius = -1`, `0` and `1` **at the same mesh step**.
+5. Check Godot Profiler/frame graph while flying or starting the scene. Printed total milliseconds are **not FPS**; engine/GPU work may be deferred beyond `ArrayMesh` setup time.
+
+Do **not** assume any particular triangle reduction or FPS improvement until locally measured. LOD stitching and dynamic near/far chunk selection belong to **BW-W4**, and the coarser setting is currently uniform across all chunks.
+
+## Next validation
+
+Verify all nine surface chunks remain visible and green, preserve the earlier black-terrain winding/lighting fix, inspect same-resolution edges, confirm only the intended colliders exist, and check Godot **Output** for per-chunk timings and warnings. Profile main-thread spikes before enlarging the world.
+
+The next unimplemented systems are true streaming/residency, distance-dependent LOD transition geometry, caves and vegetation. See [root roadmap](../README.md).

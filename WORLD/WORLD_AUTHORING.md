@@ -185,6 +185,12 @@ Provide development toggles (when implemented) for chunk bounds, current LOD, ac
 
 Performance measurements must state hardware, render resolution, vegetation count/density, scene, position and settings. **Do not claim 60 FPS, kilometre-scale capacity or successful cave support without actual checks.** The owner typically performs Godot visual/performance validation; agents keep tests brief unless more is explicitly requested.
 
+### BW-W1 performance diagnostic pass (awaiting local validation)
+
+The finite `SCENE/Scene_World.tscn` preview now exposes uniform `MeshStep` settings 1, 2 and 4 while preserving each chunk's physical area. It also caches neighbouring column heights for surface-normal gradients (with outside samples at chunk boundaries), decouples `ArrayMesh` setup from expensive trimesh collision into separate frames, and defaults collision to the central chunk only. See [WORLD/README.md](README.md) for measurement procedure and original screenshot baseline.
+
+Every generated chunk reports CPU meshing and mesh setup time; each generated collider reports physics cooking time. This is **not GPU-completion timing** or a continuous in-game frame profiler. Coarser `MeshStep` is only a preview quality/performance experiment; it is **not streamed LOD** and does not solve mixed-resolution transition cracks. Do not claim the result is visually lossless or faster until tested in the owner's Godot runtime.
+
 ## 11. Things not to do
 
 - Do not introduce Terrain3D, Voxel Tools or other world plugins without authorization.

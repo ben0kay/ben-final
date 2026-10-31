@@ -2,7 +2,7 @@
 
 **Repository:** ben0kay/ben-final  
 **Engine:** Godot 4 .NET / C# (existing Ben Final project.godot preserved; C# support configured)  
-**Status:** Initial FPS controller and independent marching-cubes WORLD preview authored; both require local Godot build/play verification. World streaming, LOD and caves remain planned.
+**Status:** Initial FPS controller and independent marching-cubes WORLD preview authored; BW-W1 performance instrumentation and same-area mesh-resolution comparison added. Local Godot build and performance validation remain pending. Streaming, dynamic LOD and caves remain planned.
 
 ## Vision
 
@@ -134,7 +134,7 @@ These are **ownership concepts**, not nodes that must be created on day one. Kee
 ## Authoring and ownership guides
 
 - **[WORLD/WORLD_AUTHORING.md](WORLD/WORLD_AUTHORING.md)** — landscape goals; deterministic geography, marching cubes, vegetation, biomes, caves, chunk streaming, long-distance presentation, seams, performance and verification.
-- **[WORLD/README.md](WORLD/README.md)** — WORLD ownership and how to run/configure the new static terrain proof.
+- **[WORLD/README.md](WORLD/README.md)** — WORLD ownership, FPS-independent test controls, mesh-step/collision settings and the BW-W1 performance comparison procedure.
 - **[PLAYER/README.md](PLAYER/README.md)** — standalone player/FPS architecture and test-scene isolation.
 - **[SCENE/README.md](SCENE/README.md)** — test-room ownership, F6 run instructions and planned separate test scenes.
 - **[ASSETS/README.md](ASSETS/README.md)** — imported model, texture and audio organization; source versus reusable scene prefabs.
@@ -146,8 +146,8 @@ The terrain vision is **coherent large-scale geography**, not random noisy hills
 | ID | Milestone | Deliverable | State |
 | --- | --- | --- | --- |
 | **BW-00** | Repository and project foundation | Documentation and .NET project; local project.godot still needs a GitHub commit | **In Progress** |
-| **BW-W1** | Marching-cubes proof of concept | Surface density, indexed meshes, normals, material and optional collision | **Awaiting Validation** |
-| **BW-W2** | Adjacent chunk generation | Bounded 3×3 static patch; world-space sampling and edge matching, seam check pending | **Awaiting Validation** |
+| **BW-W1** | Marching-cubes proof of concept | Surface density, indexed mesh, shared-height normals, separate mesh/collision timing, debug spike counters and resolution comparison | **Awaiting Validation** |
+| **BW-W2** | Adjacent chunk generation | Bounded 3×3 static patch; world-space sampling and matched boundaries with adjustable uniform mesh step, seam check pending | **Awaiting Validation** |
 | **BW-W3** | Natural geography and caves | Coherent terrain regions, height variation, ridges, density shaping, cliffs, caves, overhangs and tunable seed | **Planned** |
 | **BW-W4** | Streaming and LOD | Loading/unloading, distance LOD and transition geometry; initial preview has only a one-worker finite generation queue | **Planned** |
 | **BW-W5** | Forest and atmosphere pass | Terrain materials, grass, pine trees, vegetation LOD/instancing, lighting/fog | **Planned** |
@@ -162,6 +162,10 @@ The terrain vision is **coherent large-scale geography**, not random noisy hills
 Start with **BW-00** and **BW-W1**. Run SCENE/Scene_World independently with its free-fly camera. Verify mesh appearance, triangle winding, collision and chunk seams before introducing caves, LOD, streaming, vegetation or 32 km scale. Test FPS features in SCENE/Scene_Player independently, without coupling them to Scene_World.
 
 Advance to later milestones only after the previous implementation is reviewed. A Git commit or a compiling project is not proof of acceptable visual quality, correct caves or smooth FPS.
+
+### BW-W1 performance comparison
+
+The pre-optimization screenshot recorded **21,308 triangles across nine chunks, 74.5 ms CPU meshing and 129.4 ms combined main-thread setup/collision work**. The new test separates mesh and collision costs, restricts collision to the centre chunk by default, reports individual chunk timings, and offers `MeshStep = 1 / 2 / 4` with **identical physical chunk dimensions**. These optimizations have **not yet been built or benchmarked locally**; follow [WORLD/README.md](WORLD/README.md) to run fair comparisons.
 
 ## Architecture and integration contracts
 

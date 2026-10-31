@@ -53,6 +53,6 @@ text = "WORLD TEST | WASD / ARROWS: fly   Q/E: down/up   SHIFT: faster\nMOUSE: l
 offset_left = 15.0
 offset_top = 82.0
 offset_right = 600.0
-offset_bottom = 180.0
+offset_bottom = 260.0
 mouse_filter = 2
 text = "Preparing terrain..."

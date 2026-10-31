@@ -103,8 +103,10 @@ CggICgv/////////AwEKCwMK/////////////wECCwELCQkLCP////////8DAAkDCQsBAgkCCwn/
     // When true 3D caves are added, use a full 3D density field and volume-aware traversal.
     public static TerrainChunkData Build(TerrainParameters config, DensityGenerator density, int chunkX, int chunkZ)
     {
-        int n = config.CellsPerChunk, side = n + 1;
-        float cell = config.CellSize, width = config.ChunkWidth;
+        // The density remains in world metres; changing mesh step only changes sampling
+        // resolution, never the physical chunk width or neighbouring boundary coordinates.
+        int n = config.CellsPerChunk / config.MeshStep, side = n + 1;
+        float cell = config.CellSize * config.MeshStep, width = config.ChunkWidth;
         float originX = chunkX * width, originZ = chunkZ * width;
         var heights = new float[side * side];
         var sampleNormals = new Vector3[side * side];
@@ -112,11 +114,22 @@ CggICgv/////////AwEKCwMK/////////////wECCwELCQkLCP////////8DAAkDCQsBAgkCCwn/
         // Height and gradient values are shared by all vertical cells of this x/z column.
         for (int x = 0; x < side; x++)
         for (int z = 0; z < side; z++)
+            heights[x * side + z] = density.Height(originX + x * cell, originZ + z * cell);
+
+        // A major CPU saving: reuse height values for interior gradients rather than
+        // resampling four expensive noise evaluations per point. For boundary vertices,
+        // fetch one outside height per missing side to match neighbouring chunks exactly.
+        for (int x = 0; x < side; x++)
+        for (int z = 0; z < side; z++)
         {
             float wx = originX + x * cell, wz = originZ + z * cell;
-            int sample = x * side + z;
-            heights[sample] = density.Height(wx, wz);
-            sampleNormals[sample] = density.SurfaceNormal(wx, wz, cell);
+            float left = x == 0 ? density.Height(wx - cell, wz) : heights[(x - 1) * side + z];
+            float right = x == n ? density.Height(wx + cell, wz) : heights[(x + 1) * side + z];
+            float back = z == 0 ? density.Height(wx, wz - cell) : heights[x * side + z - 1];
+            float front = z == n ? density.Height(wx, wz + cell) : heights[x * side + z + 1];
+            float invDiameter = 1f / (2f * cell);
+            sampleNormals[x * side + z] = new Vector3(
+                -(right - left) * invDiameter, 1f, -(front - back) * invDiameter).Normalized();
         }
 
         var vertices = new List<Vector3>(n * n * 2);
