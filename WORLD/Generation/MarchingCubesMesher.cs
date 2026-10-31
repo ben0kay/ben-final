@@ -158,8 +158,10 @@ CggICgv/////////AwEKCwMK/////////////wECCwELCQkLCP////////8DAAkDCQsBAgkCCwn/
                     int a = VertexForEdge(e0, x, y, z, n, cell, values, sampleNormals, edgeCache, vertices, normals);
                     int b = VertexForEdge(e1, x, y, z, n, cell, values, sampleNormals, edgeCache, vertices, normals);
                     int c = VertexForEdge(e2, x, y, z, n, cell, values, sampleNormals, edgeCache, vertices, normals);
-                    // Reverse the traditional table's inward mathematical normals to point from solid toward air.
-                    indices.Add(a); indices.Add(c); indices.Add(b);
+                    // Godot's ArrayMesh front-face winding follows the classic table order for
+                    // this corner convention; reversing it made the visible terrain back-facing.
+                    // Vertex normals still point outward/up from the signed-density field.
+                    indices.Add(a); indices.Add(b); indices.Add(c);
                 }
             }
         }

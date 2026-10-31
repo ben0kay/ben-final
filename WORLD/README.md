@@ -51,7 +51,7 @@ The custom terrain material is deliberately minimal and **does not represent the
 
 ## Roadmap
 
-1. **BW-W1:** inspect that geometry is visible, shading is correctly oriented, and collision behaves.
+1. **BW-W1:** after the initial black-terrain report, the triangle winding and sky ambient source were corrected. Inspect that geometry is green/rocky, shading is correctly oriented, and collision behaves. **Local validation pending.**
 2. **BW-W2:** inspect same-LOD chunk seams and normal continuity across borders.
 3. **BW-W3:** richer geography, rock cliffs and volumetric cave features (after verifying 3D density).
 4. **BW-W4:** true chunk residency, worker budgets, LOD and crack-free transitions.
