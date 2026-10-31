@@ -2,7 +2,7 @@
 
 **Repository:** ben0kay/ben-final  
 **Engine:** Godot 4 .NET / C# (existing Ben Final project.godot preserved; C# support configured)  
-**Status:** The owner tested the 27×27 (1,728 m) static terrain preview: 729 chunks loaded, but the landscape looked too flat alongside an overly dense wall of sharp mountains. The F1 test panel now supports **any 1–27 chunks per side**, a seed field, seven terrain-shaping sliders and regeneration. Broad hill/peak and mountain-coverage shaping has been revised; this new pass awaits Godot validation. True streaming, mixed-distance LOD and caves remain planned.
+**Status:** The owner tested the 27×27 (1,728 m) static terrain preview: 729 chunks loaded, but the landscape looked too flat alongside an overly dense wall of sharp mountains. The F1 test panel now supports **any 1–50 chunks per side**, including 50×50 (2,500 chunks), with a seed field, seven terrain-shaping sliders and regeneration. Broad hill/peak and mountain-coverage shaping has been revised; this new pass awaits Godot validation. True streaming, mixed-distance LOD and caves remain planned.
 
 ## Vision
 
@@ -17,7 +17,7 @@ Build each subsystem in its own scene and test environment; bring them together 
 | Development scene | Primary purpose | Dependencies |
 | --- | --- | --- |
 | **SCENE/Scene_Player.tscn** | Arrow-key FPS, inverted mouse look, RMB jump and right-Ctrl crouch | Instances reusable PLAYER/Player.tscn; graybox with collision (awaiting validation) |
-| **SCENE/Scene_World.tscn** | Static world test with numeric 1–27 NxN chunks, F1 seed + 7 geography sliders, regeneration and fly camera | Instances WORLD/World.tscn; no Player required; new panel/landforms await validation |
+| **SCENE/Scene_World.tscn** | Static world test with numeric 1–50 NxN chunks, F1 seed + 7 geography sliders, regeneration and fly camera | Instances WORLD/World.tscn; no Player required; new panel/landforms await validation |
 | **SCENE/Scene_Buildings.tscn** | Buildings, interiors, doors, props, stairs, basements, collision | Building scenes and test ground |
 | **SCENE/Scene_AI.tscn** | Pathfinding, perception, investigation, combat and NPC simulation | AI actors, simple target/player stand-in, test geometry |
 | **SCENE/Scene_Game.tscn** | Eventually instantiate integrated World, Player, AI and UI | Only systems ready for integration |
@@ -155,7 +155,7 @@ The terrain vision is **coherent large-scale geography**, not random noisy hills
 | --- | --- | --- | --- |
 | **BW-00** | Repository and project foundation | Documentation and .NET project; local project.godot still needs a GitHub commit | **In Progress** |
 | **BW-W1** | Marching-cubes proof of concept | Surface density, indexed mesh, shared-height normals, separate mesh/collision timing, debug spike counters and resolution comparison | **Awaiting Validation** |
-| **BW-W2** | Adjacent chunk generation | Static centre-out NxN grid (1–27 chunks per side) with F1 numeric world-size control and safe regeneration; seam checks pending | **Awaiting Validation** |
+| **BW-W2** | Adjacent chunk generation | Static centre-out NxN grid (1–50 chunks per side) with F1 numeric world-size control and safe regeneration; seam checks pending | **Awaiting Validation** |
 | **BW-W3A** | Composed geography | Original pass owner-tested (too flat + wall of spikes). New broad rolling hill masses, mountain coverage mask and seven shaping sliders implemented | **Awaiting Validation** |
 | **BW-W3B** | True 3D caves and overhangs | Full volumetric density, vertical chunk ownership, cave entrances, editable terrain and basements | **Planned** |
 | **BW-W4** | Streaming and LOD | Loading/unloading, distance LOD and transition geometry; initial preview has only a one-worker finite generation queue | **Planned** |

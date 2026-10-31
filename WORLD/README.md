@@ -1,6 +1,6 @@
 # WORLD — Procedural World Preview
 
-**Status:** The 1,728×1,728 m, 27×27-chunk static preview was tested in Godot and loaded 729/729 chunks. The screenshot revealed a mostly bland plain and an almost continuous overly spiky mountain wall. The next pass adds an **F1 integer chunks-per-side field (1–27)**, seed entry and seven geography sliders; terrain noise is adjusted to create separated mountain groups and more rolling land. **New code awaits Godot validation.** Not streaming, LOD or caves.
+**Status:** The 1,728×1,728 m, 27×27-chunk static preview was tested in Godot and loaded 729/729 chunks. The screenshot revealed a mostly bland plain and an almost continuous overly spiky mountain wall. The next pass adds an **F1 integer chunks-per-side field (1–50)**, seed entry and seven geography sliders; terrain noise is adjusted to create separated mountain groups and more rolling land. **New code awaits Godot validation.** Not streaming, LOD or caves.
 
 **Continuation plan:** [WORLD_IMPLEMENTATION_PLAN.md](WORLD_IMPLEMENTATION_PLAN.md) — owner-run benchmarks, findings, P0/P1/P2 work tickets and acceptance tests for Codex. **Authoring guide:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md). Keep generation, rendering, collisions, future vegetation and LOD under WORLD, separate from PLAYER.
 
@@ -40,7 +40,7 @@ WORLD/
 
 ### F1 world-size and geography controls
 
-**World size:** `Chunks per side` is a numeric SpinBox that accepts **any integer from 1 through 27**. Each chunk is currently 64×64 metres at the default `CellsPerChunk=32, CellSize=2`. Examples:
+**World size:** `Chunks per side` is a numeric SpinBox that accepts **any integer from 1 through 50**. Each chunk is currently 64×64 metres at the default `CellsPerChunk=32, CellSize=2`. Examples:
 
 | Enter | Generated chunks | Physical world width |
 | ---: | ---: | ---: |
@@ -48,6 +48,7 @@ WORLD/
 | 10 | **10×10 = 100** | 640 m |
 | 17 | **17×17 = 289** | 1,088 m |
 | 27 | **27×27 = 729** | 1,728 m |
+| **50 (stress test)** | **50×50 = 2,500** | **3,200 m** |
 
 Even values are supported: for `10×10`, the stable integer coordinates run -5 through +4 on each horizontal axis; for `9×9` they run -4 through +4. The displayed total and number of generated chunks match the actual input.
 
@@ -66,7 +67,9 @@ Even values are supported: for `10×10`, the stable integer coordinates run -5 t
 | Peak sharpness | 2.75 | Larger = narrower/spikier crests; lower = broader peaks |
 | Mountain coverage | 65% | Broad world-space mask controlling how much of the northern/flank zone becomes mountain groups |
 
-**Performance and regeneration:** one worker runs at a time, a **six-result** bounded CPU mesh queue limits producer backlog, existing chunks are removed in batches of **12 per frame**, and at most one mesh or collider is installed per frame. The old generation is cancelled and stale results discarded when you press Regenerate again. The scale tree is resnapped to the new seed/heights; it can still be removed entirely from `WorldActorsRoot/DebugPropsRoot`. After loading, all chunks stay resident—this remains a **static world**, so 27×27 is much more resource-intensive than 9×9.
+**50×50 is an intentionally heavy stress test:** it represents **10.24 km²** of *static* terrain, around **3.43 times** the area of the 27×27 preview. The F1 panel previews the requested chunk count and width and shows a high-load warning for 30×30 and larger. The old 27×27 preset remains the saved startup default. Since there is **no unload/streaming**, 2,500 ArrayMeshes may put substantial pressure on GPU memory, system memory and draw-call throughput. The camera's far plane is raised to 4,300 m so you can inspect the larger area. Use `MeshStep=2` (4 m sampling) to reduce geometry if necessary. No FPS improvement is implied.
+
+**Performance and regeneration:** one worker runs at a time, a **six-result** bounded CPU mesh queue limits producer backlog, existing chunks are removed in batches of **12 per frame**, and at most one mesh or collider is installed per frame. The old generation is cancelled and stale results discarded when you press Regenerate again. The scale tree is resnapped to the new seed/heights; it can still be removed entirely from `WorldActorsRoot/DebugPropsRoot`. After loading, all chunks stay resident—this remains a **static world**, so 50×50 is substantially more resource-intensive than 27×27.
 
 **Known limitation:** the North mountain layout is defined in *world metres* rather than relative fractions of each selected map width. Changing chunk count reveals more or less of one **consistent larger procedural geography**, not a resized copy of a fixed layout. This is deliberate for eventual streaming. The new mountain coverage mask reduces the old wall, and peak noise is less frequent, but visual suitability is **not yet verified**.
 
@@ -105,7 +108,7 @@ To test: build C#, F6 `SCENE/Scene_World.tscn`, let the selected chunk count fin
 
 | Property | Default | Meaning |
 | --- | ---: | --- |
-| `ChunkRadius` | 13 | Saved *startup* setting for 27×27. The F1 field directly accepts 1–27 chunks per side, including even counts |
+| `ChunkRadius` | 13 | Saved *startup* setting for 27×27. The F1 field directly accepts 1–50 chunks per side, including even counts |
 | `CellsPerChunk` | 32 | Nominal cells along each chunk axis |
 | `CellSize` | 2.0 m | New large-world preset: 32 × 2 m = **64 m per chunk**, 9 × 64 m = **576 m across**. Earlier screenshot baseline used 1.0 m |
 | `MeshStep` | 1 | Current 2 m sampling; 2 = 4 m sampling; 4 = 8 m sampling. **Physical chunk width remains 64 m** |

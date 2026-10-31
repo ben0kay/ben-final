@@ -12,6 +12,7 @@ public partial class WorldTestScene : Node3D
     private Label _statistics = null!;
     private PanelContainer _settingsPanel = null!;
     private SpinBox _chunkCount = null!, _seed = null!;
+    private Label _sizeWarning = null!;
     private OptionButton _detail = null!;
     private Button _regenerate = null!, _reset = null!;
 
@@ -31,6 +32,7 @@ public partial class WorldTestScene : Node3D
         _statistics = GetNode<Label>("DebugUIRoot/Statistics");
         _settingsPanel = GetNode<PanelContainer>("DebugUIRoot/WorldSettingsPanel");
         _chunkCount = GetNode<SpinBox>(ControlsPath + "/ChunkCount");
+        _sizeWarning = GetNode<Label>(ControlsPath + "/SizeWarning");
         _seed = GetNode<SpinBox>(ControlsPath + "/Seed");
         _detail = GetNode<OptionButton>(ControlsPath + "/DetailPreset");
         _regenerate = GetNode<Button>(ControlsPath + "/RegenerateButton");
@@ -47,6 +49,7 @@ public partial class WorldTestScene : Node3D
             slider.ValueChanged += OnSliderValueChanged;
         }
 
+        _chunkCount.ValueChanged += OnChunkCountChanged;
         ResetControlsToWorldDefaults();
         _settingsPanel.Visible = false;
         _regenerate.Pressed += OnRegeneratePressed;
@@ -70,6 +73,7 @@ public partial class WorldTestScene : Node3D
         _sliders["Sharpness"].Value = settings.PeakSharpness;
         _sliders["Coverage"].Value = settings.MountainCoverage * 100f;
         UpdateSliderLabels();
+        UpdateWorldSizeHint();
     }
     #endregion
 
@@ -94,7 +98,7 @@ public partial class WorldTestScene : Node3D
         _chunkCount.Apply();
         _seed.Apply();
 
-        int count = Math.Clamp((int)_chunkCount.Value, 1, 27);
+        int count = Math.Clamp((int)_chunkCount.Value, 1, 50);
         int step = _detail.GetSelectedId();
         TerrainParameters parameters = _world.Settings.Snapshot() with
         {
@@ -111,6 +115,22 @@ public partial class WorldTestScene : Node3D
         _world.RegenerateWorld(count, step, parameters);
         if (_scaleTree != null && GodotObject.IsInstanceValid(_scaleTree))
             _scaleTree.SnapToTerrain(parameters);
+    }
+
+    // =========================================================
+    // Update a lightweight estimate without regenerating or allocating any terrain.
+    private void OnChunkCountChanged(double value) => UpdateWorldSizeHint();
+
+    // =========================================================
+    private void UpdateWorldSizeHint()
+    {
+        int count = Math.Clamp((int)_chunkCount.Value, 1, 50);
+        int chunks = count * count;
+        float metres = count * _world.Settings.Snapshot().ChunkWidth;
+        string warning = count >= 30
+            ? "\nHigh load: all chunks stay resident (no streaming). Try 4 m detail if needed."
+            : "";
+        _sizeWarning.Text = $"{count} x {count} = {chunks:N0} chunks | {metres:N0} m across" + warning;
     }
 
     // =========================================================
@@ -135,6 +155,7 @@ public partial class WorldTestScene : Node3D
     public override void _ExitTree()
     {
         if (GodotObject.IsInstanceValid(_world)) _world.StatisticsChanged -= UpdateStatistics;
+        if (GodotObject.IsInstanceValid(_chunkCount)) _chunkCount.ValueChanged -= OnChunkCountChanged;
         if (GodotObject.IsInstanceValid(_regenerate)) _regenerate.Pressed -= OnRegeneratePressed;
         if (GodotObject.IsInstanceValid(_reset)) _reset.Pressed -= ResetControlsToWorldDefaults;
         foreach (HSlider slider in _sliders.Values)

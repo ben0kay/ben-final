@@ -50,7 +50,7 @@ transform = Transform3D(1, 0, 0, 0, 0.987688, -0.156434, 0, 0.156434, 0.987688, 
 script = ExtResource("2")
 current = true
 fov = 78.0
-far = 2600.0
+far = 4300.0
 
 [node name="DebugUIRoot" type="CanvasLayer" parent="."]
 
@@ -97,15 +97,20 @@ text = "WORLD GENERATOR — F1"
 
 [node name="ChunkLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
-text = "Chunks per side (9 = 9 x 9)"
+text = "Chunks per side (1–50; 50 = 2,500 chunks)"
 
 [node name="ChunkCount" type="SpinBox" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
 min_value = 1.0
-max_value = 27.0
+max_value = 50.0
 step = 1.0
 value = 27.0
 rounded = true
+
+[node name="SizeWarning" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+autowrap_mode = 3
+text = "27 x 27 = 729 chunks, 1,728 m across"
 
 [node name="DetailLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2

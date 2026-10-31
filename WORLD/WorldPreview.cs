@@ -64,7 +64,7 @@ public partial class WorldPreview : Node3D
     public void RegenerateWorld(int chunksPerSide, int meshStep, TerrainParameters? terrainOverride = null)
     {
         if (Settings == null || _terrainRoot == null) return;
-        int count = Math.Clamp(chunksPerSide, 1, 27);
+        int count = Math.Clamp(chunksPerSide, 1, 50);
 
         _cancellation?.Cancel();
         _generator = null;

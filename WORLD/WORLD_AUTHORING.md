@@ -1,6 +1,6 @@
 # WORLD Authoring Guide — Ben Final
 
-> **Status: AUTHORING STANDARD.** Custom marching-cubes terrain and a large static preview exist. The owner tested 27×27 chunks and requested stronger macro geography; a numeric 1–27 NxN F1 world-size control and seven composition sliders are now authored but awaiting local validation. Caves, streaming, water and distance LOD remain unimplemented.
+> **Status: AUTHORING STANDARD.** Custom marching-cubes terrain and a large static preview exist. The owner tested 27×27 chunks and requested stronger macro geography; a numeric 1–50 NxN F1 world-size control (50×50 is a heavy static stress test) and seven composition sliders are now authored but awaiting local validation. Caves, streaming, water and distance LOD remain unimplemented.
 >
 > **Scope:** `WORLD/` and the existing independent `SCENE/Scene_World.tscn`.  
 > **Engine:** Godot 4 .NET / C#. **Terrain3D, Voxel Tools and other terrain plugins are not assumed or required.**  
