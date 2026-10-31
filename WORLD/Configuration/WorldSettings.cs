@@ -5,13 +5,13 @@ using Godot;
 public partial class WorldSettings : Resource
 {
     [ExportGroup("Preview Grid")]
-    [Export(PropertyHint.Range, "0,25,1")] public int ChunkRadius { get; set; } = 13;
+    [Export(PropertyHint.Range, "0,50,1")] public int ChunkRadius { get; set; } = 13;
     [Export(PropertyHint.Range, "8,48,1")] public int CellsPerChunk { get; set; } = 32;
     [Export(PropertyHint.Range, "0.5,3,0.5")] public float CellSize { get; set; } = 2f;
     [Export] public bool GenerateCollision { get; set; } = true;
     // Manhattan/radial streaming is not implemented. This fixed square-grid proximity
     // filter determines which chunks receive physics: -1 none, 0 center, 1 center + neighbours.
-    [Export(PropertyHint.Range, "-1,25,1")] public int CollisionChunkRadius { get; set; } = 0;
+    [Export(PropertyHint.Range, "-1,50,1")] public int CollisionChunkRadius { get; set; } = 0;
     // Keep the same metres per chunk. With default 32 nominal cells and 2 m cells,
     // MeshStep 1/2/4 yields 2 m / 4 m / 8 m surface sampling respectively.
     [Export(PropertyHint.Range, "1,4,1")] public int MeshStep { get; set; } = 1;
@@ -49,7 +49,7 @@ public partial class WorldSettings : Resource
     // Snapshot values before the worker starts; no Godot Resource is read on that worker.
     public TerrainParameters Snapshot()
     {
-        int cells = Mathf.Clamp(CellsPerChunk, 8, 48), radius = Mathf.Clamp(ChunkRadius, 0, 25);
+        int cells = Mathf.Clamp(CellsPerChunk, 8, 48), radius = Mathf.Clamp(ChunkRadius, 0, 50);
         int requestedStep = MeshStep >= 4 ? 4 : MeshStep >= 2 ? 2 : 1;
         // Use only exact divisors so every chunk retains its original physical width.
         int step = cells % requestedStep == 0 ? requestedStep : 1;

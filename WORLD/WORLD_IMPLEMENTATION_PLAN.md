@@ -4,7 +4,7 @@
 >
 > **Repository:** `ben0kay/ben-final` — current development branch `main`.
 > **Last documented user tests:** October 30, 2026 (Godot 4.7.2 .NET, screenshots supplied in chat).
-> **State:** The owner ran **27×27 = 729 chunks (1,728 m)** in Godot and found the lowlands bland and the mountains a continuous wall of thin spikes. The F1 panel now accepts **1–50 chunks per side**, any integer, and exposes seven terrain sliders plus seed and mesh detail; the default terrain now has more rolling relief and broad mountain coverage masks. **The new pass awaits local validation.** Streaming, mixed LOD, caves, vegetation and persistence remain unimplemented.
+> **State:** The owner ran **27×27 = 729 chunks (1,728 m)** in Godot and found the lowlands bland and the mountains a continuous wall of thin spikes. The F1 panel now accepts **1–100 chunks per side**, any integer, and exposes seven terrain sliders plus seed and mesh detail; the default terrain now has more rolling relief and broad mountain coverage masks. **The new pass awaits local validation.** Streaming, mixed LOD, caves, vegetation and persistence remain unimplemented.
 >
 > **Companion documents:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md) explains the intended geology/terrain techniques; [README.md](README.md) explains existing files and how to run them; [root README](../README.md) tracks the project's milestone statuses; [CodePreferences](../CodePreferences.md) and [AGENTS](../AGENTS.md) govern coding and Git practice.
 
@@ -33,7 +33,7 @@ Engineering rules:
 | World-space seeded terrain shaping | `WORLD/Generation/DensityGenerator.cs` | **BW-W3A revised after owner screenshot**: wider-scope rolling meadow hills, lower-frequency ridges and world-space coverage mask for separated mountain groups. Height-derived only, no caves; **new version awaits validation** |
 | Classic indexed marching cubes | `WORLD/Generation/MarchingCubesMesher.cs` | **Previously visually validated** on nine low chunks; now extends vertical sampling to configurable bounds, using revised vertical edge-cache stride. Tall mountain topology **awaits validation** |
 | Grass/rock color material | `WORLD/Materials/WorldTerrain.gdshader` | **Visually visible**, but deliberately basic; not the final terrain art |
-| Static terrain and asynchronous CPU generation | `WORLD/WorldPreview.cs` | **Owner demonstrated 729/729 chunks** in the prior version; updated code supports 1–50 **explicit** chunks per side including even numbers, bounded six-result queue, single worker, cancellable regeneration and 12-chunk-per-frame cleanup |
+| Static terrain and asynchronous CPU generation | `WORLD/WorldPreview.cs` | **Owner demonstrated 729/729 chunks** in the prior version; updated code supports 1–100 **explicit** chunks per side including even numbers, bounded six-result queue, single worker, cancellable regeneration and 12-chunk-per-frame cleanup |
 | Optional physics in nearby chunks | `WORLD/WorldPreview.cs`, `WORLD/Configuration/WorldMaster.tres` | **Implemented**, default one centre-chunk collider; **walking/collision accuracy not yet validated** |
 | Inspector settings | `WORLD/Configuration/WorldSettings.cs`, `WorldMaster.tres` | **Implemented**: earlier settings plus new MountainCoverage, valley/foothill/mountain controls, F1 temporary snapshot overrides (saved resource unchanged) |
 | Generation statistics | `WORLD/WorldPreview.cs`, `WORLD/Debug/WorldTestScene.cs` | **Earlier HUD owner-tested**; F1 now includes direct NxN count, seed, seven sliders, detail and regeneration. The new UI awaits Godot validation |
@@ -42,7 +42,7 @@ Engineering rules:
 | Distance-dependent mesh LOD and stitching | — | **Not implemented**; `MeshStep` is one uniform global resolution for the entire test patch |
 | 3D cave/overhang editing, save state, forest, water | — | **Not implemented** |
 
-**Current configurable static flyover (729 chunks owner-tested; revised generation awaits validation):** `ChunkRadius=13` produces **27×27 = 729 chunks**; `CellsPerChunk=32`, `CellSize=2 m` yields **64×64 m chunks** and a **1,728×1,728 m horizontal patch**. F1 now accepts **integer side count 1–50**, including evens (e.g. 9→81, 10→100 chunks), plus seed, seven terrain sliders and uniform MeshStep=1/2. Configurable vertical coverage is now **y=-16 to 300 m** independent of the 64 m horizontal chunk size; heights outside this range can still be clipped. Default `MeshStep=1` samples every **2 m** and steps 2/4 sample every **4/8 m**. `CollisionChunkRadius=0` means the centre chunk only, **not proximity-based streaming**. The bounded worker generates chunks centre-outward; static chunks are all retained after loading. Restore `ChunkRadius=1` and `CellSize=1 m` for historical 96 m measurements.
+**Current configurable static flyover (729 chunks owner-tested; revised generation awaits validation):** `ChunkRadius=13` produces **27×27 = 729 chunks**; `CellsPerChunk=32`, `CellSize=2 m` yields **64×64 m chunks** and a **1,728×1,728 m horizontal patch**. F1 now accepts **integer side count 1–100**, including evens (e.g. 9→81, 10→100 chunks), plus seed, seven terrain sliders and uniform MeshStep=1/2. Configurable vertical coverage is now **y=-16 to 300 m** independent of the 64 m horizontal chunk size; heights outside this range can still be clipped. Default `MeshStep=1` samples every **2 m** and steps 2/4 sample every **4/8 m**. `CollisionChunkRadius=0` means the centre chunk only, **not proximity-based streaming**. The bounded worker generates chunks centre-outward; static chunks are all retained after loading. Restore `ChunkRadius=1` and `CellSize=1 m` for historical 96 m measurements.
 
 ## 3. Observed performance — preserve these benchmarks
 
@@ -105,7 +105,7 @@ These tickets specify **recommended next tasks**, not permission to implement al
 
 **Implemented in source this pass:**
 
-- F1 has a `SpinBox` field for **chunks per side** (1–50, including even values), a seed box, detail selection, and **seven sliders**: Meadow variation, Valley half-width, Rolling hill height, Mountain mass, Peak height, Peak sharpness and Mountain coverage. Clicking Regenerate applies a single immutable runtime `TerrainParameters` snapshot; editing doesn't mutate the resource or start generation until clicked. Reset restores saved `WorldMaster.tres` defaults to the UI.
+- F1 has a validated LineEdit text field for **chunks per side** (1–100, including even values), a seed box, detail selection, and **seven sliders**: Meadow variation, Valley half-width, Rolling hill height, Mountain mass, Peak height, Peak sharpness and Mountain coverage. Clicking Regenerate applies a single immutable runtime `TerrainParameters` snapshot; editing doesn't mutate the resource or start generation until clicked. Reset restores saved `WorldMaster.tres` defaults to the UI.
 - WorldPreview's integer grid coordinates are chosen by explicit NxN count: `minimum = -count/2`, `maximum = minimum+count-1`, with centre-first rings. `ChunkCount = count*count`, and HUD world width = `count*ChunkWidth`. For even counts, the grid is one chunk farther toward negative axes; seams remain same-LOD.
 - The original F1 regeneration safeguards (cancellation, six pending mesh outputs, single serialized CPU worker, 12 old chunk removals per frame and one mesh/collider install per frame) are preserved. The debug tree resnaps once to the revised seed/heights when regenerating.
 - Geography now has stronger broad lowland variation, scattered meadow-hill relief, **low-frequency mountainous masses**, a world-space `MountainCoverage` mask forming separate groups/lower passes and less frequent, wider ridges. Parameters remain world-coordinate based to suit future streaming. The goal is to avoid a flat carpet and spiked wall, *not* to match the reference screenshot with textures/vegetation/lighting.
@@ -116,11 +116,21 @@ These tickets specify **recommended next tasks**, not permission to implement al
 
 ### BW-W2.4 — Optional 50×50 static stress test (SOURCE IMPLEMENTED; AWAITING LOCAL TEST)
 
-The previous 27×27 editor cap was an **author-imposed precaution**, not a Godot or marching-cubes limit. The F1 `ChunksPerSide` SpinBox, UI clamp, regeneration clamp and `WorldSettings.ChunkRadius` snapshot range now permit **50×50** (2,500 chunks); the startup default remains 27×27 (729 chunks). At 64 m per chunk, that spans **3,200×3,200 m (10.24 km²)**, around **3.43 times** the earlier 27×27 area.
+The previous 27×27 editor cap was an **author-imposed precaution**, not a Godot or marching-cubes limit. The F1 input, UI validation, regeneration range and `WorldSettings.ChunkRadius` snapshot range now permit **up to 100×100**, with an explicit user confirmation beyond 50×50 (2,500 chunks); the startup default remains 27×27 (729 chunks). At 64 m per chunk, that spans **3,200×3,200 m (10.24 km²)**, around **3.43 times** the earlier 27×27 area.
 
 The F1 panel displays the selected chunk count and world width, plus a high-load warning at 30×30 and above. Fly camera far clip is 4,300 m. Existing safeguards remain: one serialized worker, at most six queued CPU meshes, one main-thread setup operation per frame and batched old-chunk cleanup. All finished meshes stay resident; **there is still no streaming, distance LOD, or distant collision**. The user can choose uniform 4 m sampling to reduce geometry.
 
 **Owner acceptance:** Enter `50`, regenerate, confirm HUD targets `2,500` chunks and `3,200 m` across, inspect camera traversal and frame time/memory, then switch back to 9 or 27 to test unloading. **Do not promise 60 FPS** for this heavy static stress case.
+
+### BW-W2.5 — Typed chunk-count regression and optional 100×100 (FIX AUTHORED; AWAITING GODOT VALIDATION)
+
+**Reported issue:** After the previous 50×50 limit increase, the owner typed 50 in F1 and clicked Regenerate, but the world still regenerated as 27×27. **Root cause is not confirmed**; the prior `SpinBox` kept typed text and its committed numeric `.Value` separately, potentially yielding a stale 27 at button click.
+
+**Code changes:** Both chunk-count and seed fields are now Godot `LineEdit` nodes; `WorldTestScene.cs` parses `.Text.Trim()` at the **button click**, validates explicit integer ranges and does not silently clamp/fall back to the old value. The F1 label shows the parsed live count/size, and a `[WORLD F1] User requested ...` log line confirms the exact request sent to `WorldPreview.RegenerateWorld`. The world manager accepts 1–100 chunks per side and the terrain settings snapshot permits the required radius. A `ConfirmationDialog` must be accepted for requests **greater than 50×50**; 27×27 remains the safe saved startup default.
+
+**Local validation:** Pull/rebuild Godot C#. Type 50 without pressing Enter, click Regenerate, confirm HUD goes to **2,500/2,500** and 3,200 m, not 729. Test 9→81, 10→100, and invalid text should be rejected. Test 100→confirmation→10,000 chunks only if willing to risk high memory/stutters. At 64 m chunks, 100×100 is **6,400×6,400 m (40.96 km²)** and is a severe **static renderer/memory stress test**, not streaming. Record Godot Output and build errors if the 50 regression persists.
+
+**Do not infer:** supporting 100 as an input does not establish that 10,000 meshes will run smoothly on the owner's GTX 1080 or that the world has dynamic chunk streaming.
 
 ### BW-W1.1 — Explain startup frame spikes (FOLLOW-UP; P0)
 

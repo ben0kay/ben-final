@@ -11,7 +11,10 @@ public partial class WorldTestScene : Node3D
     private WorldScaleTree? _scaleTree;
     private Label _statistics = null!;
     private PanelContainer _settingsPanel = null!;
-    private SpinBox _chunkCount = null!, _seed = null!;
+    private LineEdit _chunkCount = null!, _seed = null!;
+    private ConfirmationDialog _largeWorldConfirmation = null!;
+    private int _pendingCount, _pendingStep;
+    private TerrainParameters _pendingParameters;
     private Label _sizeWarning = null!;
     private OptionButton _detail = null!;
     private Button _regenerate = null!, _reset = null!;
@@ -31,9 +34,10 @@ public partial class WorldTestScene : Node3D
         _scaleTree = GetNodeOrNull<WorldScaleTree>("WorldActorsRoot/DebugPropsRoot/ScalePine_14m");
         _statistics = GetNode<Label>("DebugUIRoot/Statistics");
         _settingsPanel = GetNode<PanelContainer>("DebugUIRoot/WorldSettingsPanel");
-        _chunkCount = GetNode<SpinBox>(ControlsPath + "/ChunkCount");
+        _chunkCount = GetNode<LineEdit>(ControlsPath + "/ChunkCount");
         _sizeWarning = GetNode<Label>(ControlsPath + "/SizeWarning");
-        _seed = GetNode<SpinBox>(ControlsPath + "/Seed");
+        _largeWorldConfirmation = GetNode<ConfirmationDialog>("DebugRoot/LargeWorldConfirmation");
+        _seed = GetNode<LineEdit>(ControlsPath + "/Seed");
         _detail = GetNode<OptionButton>(ControlsPath + "/DetailPreset");
         _regenerate = GetNode<Button>(ControlsPath + "/RegenerateButton");
         _reset = GetNode<Button>(ControlsPath + "/ResetButton");
@@ -49,7 +53,8 @@ public partial class WorldTestScene : Node3D
             slider.ValueChanged += OnSliderValueChanged;
         }
 
-        _chunkCount.ValueChanged += OnChunkCountChanged;
+        _chunkCount.TextChanged += OnChunkCountChanged;
+        _largeWorldConfirmation.Confirmed += OnLargeWorldConfirmed;
         ResetControlsToWorldDefaults();
         _settingsPanel.Visible = false;
         _regenerate.Pressed += OnRegeneratePressed;
@@ -62,8 +67,8 @@ public partial class WorldTestScene : Node3D
     private void ResetControlsToWorldDefaults()
     {
         TerrainParameters settings = _world.Settings.Snapshot();
-        _chunkCount.Value = _world.CurrentChunksPerSide;
-        _seed.Value = settings.Seed;
+        _chunkCount.Text = _world.CurrentChunksPerSide.ToString();
+        _seed.Text = settings.Seed.ToString();
         _detail.Select(_world.CurrentMeshStep == 2 ? 1 : 0);
         _sliders["Meadow"].Value = settings.BroadAmplitude;
         _sliders["Valley"].Value = settings.ValleyHalfWidth;
@@ -94,15 +99,22 @@ public partial class WorldTestScene : Node3D
     // =========================================================
     private void OnRegeneratePressed()
     {
-        // Commit text currently being typed, even if Enter hasn't been pressed.
-        _chunkCount.Apply();
-        _seed.Apply();
+        // Read actual typed text, NOT a previously committed SpinBox numeric value.
+        if (!TryReadChunkCount(out int count))
+        {
+            _sizeWarning.Text = "Enter a whole-number grid size between 1 and 100.";
+            return;
+        }
+        if (!int.TryParse(_seed.Text.Trim(), out int seed) || seed < 0 || seed > 99999)
+        {
+            _sizeWarning.Text = "Invalid seed. Enter a number from 0 to 99999.";
+            return;
+        }
 
-        int count = Math.Clamp((int)_chunkCount.Value, 1, 50);
         int step = _detail.GetSelectedId();
         TerrainParameters parameters = _world.Settings.Snapshot() with
         {
-            Seed = (int)_seed.Value,
+            Seed = seed,
             BroadAmplitude = (float)_sliders["Meadow"].Value,
             ValleyHalfWidth = (float)_sliders["Valley"].Value,
             RidgeAmplitude = (float)_sliders["Hills"].Value,
@@ -112,6 +124,37 @@ public partial class WorldTestScene : Node3D
             MountainCoverage = (float)_sliders["Coverage"].Value / 100f
         };
 
+        if (count > 50)
+        {
+            _pendingCount = count;
+            _pendingStep = step;
+            _pendingParameters = parameters;
+            _largeWorldConfirmation.DialogText =
+                $"Generate {count} x {count} = {count * count:N0} static chunks?\n\n" +
+                "All meshes remain resident. A very large world may exhaust RAM/VRAM " +
+                "or freeze Godot while loading. This is a stress test, not streaming.\n\n" +
+                "Use 4 m detail if the 2 m setting is too expensive.";
+            _largeWorldConfirmation.PopupCentered();
+            return;
+        }
+
+        StartRegeneration(count, step, parameters);
+    }
+
+    // =========================================================
+    // Never interpret invalid input as the previous size (27) or silently clamp.
+    private bool TryReadChunkCount(out int count) =>
+        int.TryParse(_chunkCount.Text.Trim(), out count) && count is >= 1 and <= 100;
+
+    // =========================================================
+    private void OnLargeWorldConfirmed() =>
+        StartRegeneration(_pendingCount, _pendingStep, _pendingParameters);
+
+    // =========================================================
+    private void StartRegeneration(int count, int step, TerrainParameters parameters)
+    {
+        _sizeWarning.Text = $"Requested: {count} x {count} = {count * count:N0} chunks — generating...";
+        GD.Print($"[WORLD F1] User requested {count} x {count} chunks, mesh step {step}, seed {parameters.Seed}.");
         _world.RegenerateWorld(count, step, parameters);
         if (_scaleTree != null && GodotObject.IsInstanceValid(_scaleTree))
             _scaleTree.SnapToTerrain(parameters);
@@ -119,17 +162,21 @@ public partial class WorldTestScene : Node3D
 
     // =========================================================
     // Update a lightweight estimate without regenerating or allocating any terrain.
-    private void OnChunkCountChanged(double value) => UpdateWorldSizeHint();
+    private void OnChunkCountChanged(string text) => UpdateWorldSizeHint();
 
     // =========================================================
     private void UpdateWorldSizeHint()
     {
-        int count = Math.Clamp((int)_chunkCount.Value, 1, 50);
+        if (!TryReadChunkCount(out int count))
+        {
+            _sizeWarning.Text = "Enter a whole-number grid size between 1 and 100.";
+            return;
+        }
         int chunks = count * count;
         float metres = count * _world.Settings.Snapshot().ChunkWidth;
-        string warning = count >= 30
-            ? "\nHigh load: all chunks stay resident (no streaming). Try 4 m detail if needed."
-            : "";
+        string warning = count > 50
+            ? "\nEXTREME load: confirmation required. No chunk streaming."
+            : count >= 30 ? "\nHigh load: all chunks stay resident. Try 4 m detail." : "";
         _sizeWarning.Text = $"{count} x {count} = {chunks:N0} chunks | {metres:N0} m across" + warning;
     }
 
@@ -155,7 +202,9 @@ public partial class WorldTestScene : Node3D
     public override void _ExitTree()
     {
         if (GodotObject.IsInstanceValid(_world)) _world.StatisticsChanged -= UpdateStatistics;
-        if (GodotObject.IsInstanceValid(_chunkCount)) _chunkCount.ValueChanged -= OnChunkCountChanged;
+        if (GodotObject.IsInstanceValid(_chunkCount)) _chunkCount.TextChanged -= OnChunkCountChanged;
+        if (GodotObject.IsInstanceValid(_largeWorldConfirmation))
+            _largeWorldConfirmation.Confirmed -= OnLargeWorldConfirmed;
         if (GodotObject.IsInstanceValid(_regenerate)) _regenerate.Pressed -= OnRegeneratePressed;
         if (GodotObject.IsInstanceValid(_reset)) _reset.Pressed -= ResetControlsToWorldDefaults;
         foreach (HSlider slider in _sliders.Values)

@@ -1,6 +1,6 @@
 # WORLD — Procedural World Preview
 
-**Status:** The 1,728×1,728 m, 27×27-chunk static preview was tested in Godot and loaded 729/729 chunks. The screenshot revealed a mostly bland plain and an almost continuous overly spiky mountain wall. The next pass adds an **F1 integer chunks-per-side field (1–50)**, seed entry and seven geography sliders; terrain noise is adjusted to create separated mountain groups and more rolling land. **New code awaits Godot validation.** Not streaming, LOD or caves.
+**Status:** The 1,728×1,728 m, 27×27-chunk static preview was tested in Godot and loaded 729/729 chunks. The screenshot revealed a mostly bland plain and an almost continuous overly spiky mountain wall. The F1 panel now uses **plain-text numeric entry** for 1–100 chunks per side and seed, with immediate size feedback, explicit error handling, and a confirmation for more than 50 per side. The prior SpinBox could show edited text while retaining the old value, suspected in the reported 50→27 regression; **the fix awaits local Godot verification**. Geography controls remain unchanged in this input-fix pass. Not streaming, LOD or caves.
 
 **Continuation plan:** [WORLD_IMPLEMENTATION_PLAN.md](WORLD_IMPLEMENTATION_PLAN.md) — owner-run benchmarks, findings, P0/P1/P2 work tickets and acceptance tests for Codex. **Authoring guide:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md). Keep generation, rendering, collisions, future vegetation and LOD under WORLD, separate from PLAYER.
 
@@ -40,7 +40,7 @@ WORLD/
 
 ### F1 world-size and geography controls
 
-**World size:** `Chunks per side` is a numeric SpinBox that accepts **any integer from 1 through 50**. Each chunk is currently 64×64 metres at the default `CellsPerChunk=32, CellSize=2`. Examples:
+**World size:** `Chunks per side` is a Godot **LineEdit** read as text on Regenerate, accepting **any integer from 1 through 100**. Unlike the previous SpinBox, it does not depend on an uncommitted numeric value. Invalid text is explicitly rejected rather than silently reverting to 27. Each chunk is currently 64×64 metres at the default `CellsPerChunk=32, CellSize=2`. Examples:
 
 | Enter | Generated chunks | Physical world width |
 | ---: | ---: | ---: |
@@ -49,6 +49,7 @@ WORLD/
 | 17 | **17×17 = 289** | 1,088 m |
 | 27 | **27×27 = 729** | 1,728 m |
 | **50 (stress test)** | **50×50 = 2,500** | **3,200 m** |
+| **100 (extreme test)** | **100×100 = 10,000** | **6,400 m** |
 
 Even values are supported: for `10×10`, the stable integer coordinates run -5 through +4 on each horizontal axis; for `9×9` they run -4 through +4. The displayed total and number of generated chunks match the actual input.
 
@@ -67,7 +68,11 @@ Even values are supported: for `10×10`, the stable integer coordinates run -5 t
 | Peak sharpness | 2.75 | Larger = narrower/spikier crests; lower = broader peaks |
 | Mountain coverage | 65% | Broad world-space mask controlling how much of the northern/flank zone becomes mountain groups |
 
-**50×50 is an intentionally heavy stress test:** it represents **10.24 km²** of *static* terrain, around **3.43 times** the area of the 27×27 preview. The F1 panel previews the requested chunk count and width and shows a high-load warning for 30×30 and larger. The old 27×27 preset remains the saved startup default. Since there is **no unload/streaming**, 2,500 ArrayMeshes may put substantial pressure on GPU memory, system memory and draw-call throughput. The camera's far plane is raised to 4,300 m so you can inspect the larger area. Use `MeshStep=2` (4 m sampling) to reduce geometry if necessary. No FPS improvement is implied.
+**50×50 and larger are stress tests, not game-size recommendations.** Grids of **51–100 per side require confirmation** before generation. A 100×100 request is 10,000 resident chunks and **40.96 km²**, potentially tens of millions of polygons. This may exhaust 8 GB VRAM or system RAM, stall rendering or crash the test. Try 4 m uniform sampling and watch system resources; real streaming and distance LOD are the required solutions before production-scale worlds.
+
+**50×50 is an intentionally heavy stress test:** it represents **10.24 km²** of *static* terrain, around **3.43 times** the area of the 27×27 preview. The F1 panel previews the **parsed text entry** as chunk count and world width; it shows a warning from 30×30 upward, an extreme warning beyond 50×50, and logs the actual requested size to Godot Output. The old 27×27 preset remains the saved startup default. Since there is **no unload/streaming**, 2,500 ArrayMeshes may put substantial pressure on GPU memory, system memory and draw-call throughput. The camera's far plane is raised to 4,300 m so you can inspect the larger area. Use `MeshStep=2` (4 m sampling) to reduce geometry if necessary. No FPS improvement is implied.
+
+**Input regression test:** On a fresh F6 run, press F1, click the size text box and replace 27 with 50; **without pressing Enter**, click Regenerate. The HUD should show **2,500 chunks and a 3,200 m width** and Godot Output should say `[WORLD F1] User requested 50 x 50`. Then test 9 → 81; 10 → 100; 100 → 10,000 after confirmation. A failed/invalid input must show a validation message instead of silently regenerating the previous size.
 
 **Performance and regeneration:** one worker runs at a time, a **six-result** bounded CPU mesh queue limits producer backlog, existing chunks are removed in batches of **12 per frame**, and at most one mesh or collider is installed per frame. The old generation is cancelled and stale results discarded when you press Regenerate again. The scale tree is resnapped to the new seed/heights; it can still be removed entirely from `WorldActorsRoot/DebugPropsRoot`. After loading, all chunks stay resident—this remains a **static world**, so 50×50 is substantially more resource-intensive than 27×27.
 

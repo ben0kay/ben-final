@@ -45,6 +45,12 @@ shadow_enabled = true
 
 [node name="DebugRoot" type="Node3D" parent="."]
 
+[node name="LargeWorldConfirmation" type="ConfirmationDialog" parent="DebugRoot"]
+title = "Large world stress test"
+ok_button_text = "Generate"
+cancel_button_text = "Cancel"
+dialog_text = "This is a large static terrain test. All chunks remain loaded."
+
 [node name="DebugCamera" type="Camera3D" parent="DebugRoot"]
 transform = Transform3D(1, 0, 0, 0, 0.987688, -0.156434, 0, 0.156434, 0.987688, 8, 63, 240)
 script = ExtResource("2")
@@ -97,20 +103,19 @@ text = "WORLD GENERATOR — F1"
 
 [node name="ChunkLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
-text = "Chunks per side (1–50; 50 = 2,500 chunks)"
+text = "Chunks per side (1–100; e.g. 50 = 2,500 chunks)"
 
-[node name="ChunkCount" type="SpinBox" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+[node name="ChunkCount" type="LineEdit" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
-min_value = 1.0
-max_value = 50.0
-step = 1.0
-value = 27.0
-rounded = true
+text = "27"
+placeholder_text = "Enter 1 to 100"
+max_length = 3
+select_all_on_focus = true
 
 [node name="SizeWarning" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
 autowrap_mode = 3
-text = "27 x 27 = 729 chunks, 1,728 m across"
+text = "27 x 27 = 729 chunks | 1,728 m across"
 
 [node name="DetailLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
@@ -124,13 +129,12 @@ layout_mode = 2
 layout_mode = 2
 text = "World seed"
 
-[node name="Seed" type="SpinBox" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+[node name="Seed" type="LineEdit" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
-min_value = 0.0
-max_value = 99999.0
-step = 1.0
-value = 147.0
-rounded = true
+text = "147"
+placeholder_text = "Seed 0 to 99999"
+max_length = 5
+select_all_on_focus = true
 
 [node name="MeadowLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
