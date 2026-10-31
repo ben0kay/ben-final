@@ -1,0 +1,9 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+[ext_resource type="Shader" path="res://ASSETS/Vegetation/Trees/PineTree001/Materials/PineTree001Foliage.gdshader" id="1"]
+[resource]
+resource_name = "PineTree001_GlobalTint_Foliage"
+shader = ExtResource("1")
+shader_parameter/forest_tint = Color(0.43, 0.55, 0.37, 1)
+shader_parameter/forest_tint_strength = 0.25
+shader_parameter/palette_response = 0.94
+shader_parameter/foliage_roughness = 0.94

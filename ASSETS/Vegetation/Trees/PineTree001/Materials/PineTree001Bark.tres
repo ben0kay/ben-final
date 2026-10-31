@@ -1,0 +1,5 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+[ext_resource type="Shader" path="res://ASSETS/Vegetation/Trees/PineTree001/Materials/PineTree001Bark.gdshader" id="1"]
+[resource]
+resource_name = "PineTree001_Stylized_Bark"
+shader = ExtResource("1")

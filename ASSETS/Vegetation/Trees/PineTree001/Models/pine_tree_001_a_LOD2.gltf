@@ -1,0 +1,204 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "Final Machine - PineTree001 stylized procedural meshes"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ],
+      "name": "PineTree001"
+    }
+  ],
+  "nodes": [
+    {
+      "name": "pine_tree_001_a_LOD2",
+      "mesh": 0
+    }
+  ],
+  "meshes": [
+    {
+      "name": "pine_tree_001_a_LOD2",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "COLOR_0": 2
+          },
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        },
+        {
+          "attributes": {
+            "POSITION": 4,
+            "NORMAL": 5,
+            "COLOR_0": 6
+          },
+          "indices": 7,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 178728,
+      "uri": "pine_tree_001_a_LOD2.bin"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 5544
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 5544,
+      "byteLength": 5544
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 11088,
+      "byteLength": 7392
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 18480,
+      "byteLength": 1848
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 20328,
+      "byteLength": 43200
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 63528,
+      "byteLength": 43200
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 106728,
+      "byteLength": 57600
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 164328,
+      "byteLength": 14400
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 462,
+      "type": "VEC3",
+      "min": [
+        -0.6144955158233643,
+        -0.1899999976158142,
+        -0.6208768486976624
+      ],
+      "max": [
+        0.6497803330421448,
+        22.450000762939453,
+        0.6501707434654236
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 462,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 462,
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5125,
+      "count": 462,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 3600,
+      "type": "VEC3",
+      "min": [
+        -3.163423538208008,
+        5.650760173797607,
+        -2.799983263015747
+      ],
+      "max": [
+        3.155240297317505,
+        22.3507080078125,
+        3.636176347732544
+      ]
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5126,
+      "count": 3600,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5126,
+      "count": 3600,
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5125,
+      "count": 3600,
+      "type": "SCALAR"
+    }
+  ],
+  "materials": [
+    {
+      "name": "PineTree001_Stylized_Bark",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.95
+      },
+      "doubleSided": false
+    },
+    {
+      "name": "PineTree001_Stylized_Foliage",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.95
+      },
+      "doubleSided": false
+    }
+  ],
+  "extras": {
+    "triangleCounts": {
+      "bark": 154,
+      "foliage": 1200,
+      "total": 1354
+    },
+    "heightMeters": 22.64
+  }
+}
