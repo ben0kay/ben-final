@@ -18,8 +18,15 @@ public partial class WorldScaleTree : Node3D
             return;
         }
 
+        SnapToTerrain(world.Settings.Snapshot());
+    }
+
+    // =========================================================
+    // The F1 panel may change terrain settings without reloading this tree node.
+    public void SnapToTerrain(TerrainParameters parameters)
+    {
         Vector3 point = GlobalPosition;
-        var terrain = new DensityGenerator(world.Settings.Snapshot());
+        var terrain = new DensityGenerator(parameters);
         float groundHeight = terrain.Height(point.X, point.Z);
         GlobalPosition = new Vector3(point.X, groundHeight - GroundSink, point.Z);
     }

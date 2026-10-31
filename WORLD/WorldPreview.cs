@@ -15,6 +15,7 @@ public partial class WorldPreview : Node3D
     public event Action<string>? StatisticsChanged;
     public string StatusText { get; private set; } = "Preparing terrain generation...";
     public int CurrentChunkRadius => _parameters.ChunkRadius;
+    public int CurrentChunksPerSide => _parameters.ChunksPerSide;
     public int CurrentMeshStep => _parameters.MeshStep;
 
     private const int MaxQueuedResults = 6;
@@ -53,28 +54,30 @@ public partial class WorldPreview : Node3D
         _terrainRoot = GetNode<Node3D>("TerrainRoot");
         _material = new ShaderMaterial { Shader = TerrainShader };
         TerrainParameters config = Settings.Snapshot();
-        RegenerateWorld(config.ChunkRadius, config.MeshStep);
+        RegenerateWorld(config.ChunksPerSide, config.MeshStep);
     }
 
     // =========================================================
     // Called from the debug test panel. No mutation of the shared WorldMaster.tres.
     // Any old work is cancelled; its results belong to an abandoned queue and cannot
     // appear in the new terrain. Old chunk nodes are removed in bounded frame batches.
-    public void RegenerateWorld(int radius, int meshStep)
+    public void RegenerateWorld(int chunksPerSide, int meshStep, TerrainParameters? terrainOverride = null)
     {
         if (Settings == null || _terrainRoot == null) return;
+        int count = Math.Clamp(chunksPerSide, 1, 27);
 
         _cancellation?.Cancel();
         _generator = null;
         _completed = new ConcurrentQueue<TerrainChunkData>();
         _pendingCollisions.Clear();
 
-        _parameters = Settings.Snapshot() with
+        _parameters = (terrainOverride ?? Settings.Snapshot()) with
         {
-            ChunkRadius = Math.Clamp(radius, 0, 13),
+            ChunkRadius = count / 2,
+            ChunksPerSide = count,
             MeshStep = meshStep is 1 or 2 or 4 ? meshStep : 1
         };
-        _total = (2 * _parameters.ChunkRadius + 1) * (2 * _parameters.ChunkRadius + 1);
+        _total = count * count;
         _attached = _colliders = _vertices = _triangles = _frameSpikes = 0;
         _spikesAfterMesh = _spikesAfterCollision = _spikesOther = _postLoadFrames = 0;
         _cpuTotalMs = _cpuMaxMs = _meshTotalMs = _meshMaxMs = 0;
@@ -112,11 +115,15 @@ public partial class WorldPreview : Node3D
         CancellationToken token)
     {
         var density = new DensityGenerator(config);
+        // Works for odd and even NxN grids: e.g. 9 => [-4..4], 10 => [-5..4].
+        int minimum = -config.ChunksPerSide / 2;
+        int maximum = minimum + config.ChunksPerSide - 1;
         for (int ring = 0; ring <= config.ChunkRadius; ring++)
         for (int x = -ring; x <= ring; x++)
         for (int z = -ring; z <= ring; z++)
         {
-            if (Math.Max(Math.Abs(x), Math.Abs(z)) != ring) continue;
+            if (Math.Max(Math.Abs(x), Math.Abs(z)) != ring
+                || x < minimum || x > maximum || z < minimum || z > maximum) continue;
             token.ThrowIfCancellationRequested();
 
             var timer = Stopwatch.StartNew();
@@ -158,7 +165,7 @@ public partial class WorldPreview : Node3D
                 _cancellation = new CancellationTokenSource();
                 CancellationToken token = _cancellation.Token;
                 _generator = GenerateAsync(_parameters, _completed, token);
-                GD.Print($"[WORLD] Requested {_total} chunks, {_parameters.ChunkWidth * (2 * _parameters.ChunkRadius + 1):F0} m across, mesh step {_parameters.MeshStep}.");
+                GD.Print($"[WORLD] Requested {_total} chunks, {_parameters.ChunkWidth * _parameters.ChunksPerSide:F0} m across, mesh step {_parameters.MeshStep}.");
             }
 
             PublishStatus();
@@ -301,10 +308,10 @@ public partial class WorldPreview : Node3D
     {
         string collision = !_parameters.GenerateCollision || _parameters.CollisionChunkRadius < 0
             ? "none" : $"radius {_parameters.CollisionChunkRadius}";
-        float size = _parameters.ChunkWidth * (2 * _parameters.ChunkRadius + 1);
+        float size = _parameters.ChunkWidth * _parameters.ChunksPerSide;
         StatusText =
-            $"World: {size:F0} x {size:F0} m | {2 * _parameters.ChunkRadius + 1} x " +
-            $"{2 * _parameters.ChunkRadius + 1} chunks | step {_parameters.MeshStep}\n" +
+            $"World: {size:F0} x {size:F0} m | {_parameters.ChunksPerSide} x " +
+            $"{_parameters.ChunksPerSide} chunks | step {_parameters.MeshStep}\n" +
             $"Chunks: {_attached}/{_total} | Colliders: {_colliders} ({collision}) " +
             $"| queued meshes: {_completed.Count}/{MaxQueuedResults}" +
             (_awaitingRegeneration ? $" | clearing: {_pendingRemoval.Count}" : "") + "\n" +

@@ -34,8 +34,13 @@ public sealed class DensityGenerator
         float hillNorthward = SmoothStep(-80f, 120f, -z);
         float hillMask = Math.Clamp(valleyEdge * (0.75f + hillNorthward * 0.25f)
             + hillNorthward * 0.2f, 0f, 1f);
-        float hillShape = 0.45f + 0.55f * Fractal(sx * 0.013f, sz * 0.014f, seed + 13);
+        float hillShape = 0.55f + 0.45f * Fractal(sx * 0.009f, sz * 0.011f, seed + 13);
         float foothills = MathF.Max(0f, hillShape) * _settings.RidgeAmplitude * hillMask;
+        // Isolated, medium-sized rises keep meadow/foothill regions from looking empty.
+        // The lowland corridor still contains gentler ground between these rises.
+        float meadowMounds = SmoothStep(0.05f, 0.55f,
+            Fractal(sx * 0.006f, sz * 0.007f, seed + 17))
+            * (1f - 0.7f * hillMask) * _settings.RidgeAmplitude * 0.26f;
 
         // One broad mountain chain on the far (negative Z) horizon plus flanking
         // mountain shoulders. A slight wandering boundary avoids a straight wall.
@@ -49,23 +54,32 @@ public sealed class DensityGenerator
         float mountainMask = Math.Clamp(MathF.Max(northernRange, flanks), 0f, 1f);
         mountainMask *= mountainMask * (3f - 2f * mountainMask);
 
-        // Broad tectonic uplift first: a believable mass instead of isolated needles.
-        float massNoise = Fractal(sx * 0.011f, sz * 0.011f, seed + 71);
+        // Sparse, broad mountain groups break up the former continuous spiked wall.
+        // Coverage moves the threshold without making regions depend on chunk borders.
+        float groupNoise = 0.5f + 0.5f *
+            Fractal(sx * 0.0038f + 17f, sz * 0.0042f - 11f, seed + 47);
+        float groups = SmoothStep(0.3f, 0.65f,
+            groupNoise + (_settings.MountainCoverage - 0.5f) * 0.6f);
+        float valleyPass = 1f - 0.58f * (1f - valleyEdge);
+        mountainMask *= (0.04f + 0.96f * groups) * valleyPass;
+
+        // Broad tectonic uplift first, before any smaller summit detail.
+        float massNoise = Fractal(sx * 0.0055f, sz * 0.0065f, seed + 71);
         float mountainMass = _settings.MountainAmplitude * mountainMask
             * (0.55f + 0.25f * massNoise);
 
         // Narrow ridged noise shapes sawtooth crests across a connected range.
         // A second octave introduces crags, but only inside mountainous regions.
         float ridgeCoordinate = sx + sz * 0.28f;
-        float ridgeNoise = Fractal(ridgeCoordinate * 0.029f, sz * 0.018f, seed + 91);
+        float ridgeNoise = Fractal(ridgeCoordinate * 0.010f, sz * 0.009f, seed + 91);
         float mainCrest = MathF.Pow(Math.Clamp(1f - MathF.Abs(ridgeNoise), 0f, 1f),
             _settings.PeakSharpness);
         float smallCrest = MathF.Pow(Math.Clamp(1f - MathF.Abs(
-            Noise(sx * 0.066f, sz * 0.059f, seed + 103)), 0f, 1f), 4f);
+            Noise(sx * 0.025f, sz * 0.023f, seed + 103)), 0f, 1f), 4f);
         float peakHeight = _settings.PeakAmplitude * mountainMask
             * (mainCrest * (0.75f + 0.25f * smallCrest));
 
-        return lowland + foothills + mountainMass + peakHeight;
+        return lowland + foothills + meadowMounds + mountainMass + peakHeight;
     }
 
     // =========================================================

@@ -23,18 +23,19 @@ public partial class WorldSettings : Resource
     [ExportGroup("Geography - Lowlands")]
     [Export] public int Seed { get; set; } = 147;
     [Export] public float BaseHeight { get; set; } = 14f;
-    [Export(PropertyHint.Range, "0,20,0.5")] public float BroadAmplitude { get; set; } = 4f;
+    [Export(PropertyHint.Range, "0,25,0.5")] public float BroadAmplitude { get; set; } = 8f;
     [Export(PropertyHint.Range, "0,12,0.5")] public float DetailAmplitude { get; set; } = 1.5f;
     [Export(PropertyHint.Range, "20,160,5")] public float ValleyHalfWidth { get; set; } = 90f;
 
     [ExportGroup("Geography - Foothills")]
     // Preserve the original export name for saved resources; this now controls hill elevation.
-    [Export(PropertyHint.Range, "0,40,1")] public float RidgeAmplitude { get; set; } = 18f;
+    [Export(PropertyHint.Range, "0,80,1")] public float RidgeAmplitude { get; set; } = 30f;
 
     [ExportGroup("Geography - Mountain Range")]
     [Export(PropertyHint.Range, "0,200,5")] public float MountainAmplitude { get; set; } = 95f;
     [Export(PropertyHint.Range, "0,150,5")] public float PeakAmplitude { get; set; } = 80f;
-    [Export(PropertyHint.Range, "1.0,8.0,0.25")] public float PeakSharpness { get; set; } = 4.0f;
+    [Export(PropertyHint.Range, "1.0,8.0,0.25")] public float PeakSharpness { get; set; } = 2.75f;
+    [Export(PropertyHint.Range, "0,1,0.05")] public float MountainCoverage { get; set; } = 0.65f;
     // Negative Z lies ahead of the fly camera; mountains rise across the far side.
     [Export] public float MountainStartZ { get; set; } = -40f;
     [Export] public float MountainFullZ { get; set; } = -220f;
@@ -53,26 +54,26 @@ public partial class WorldSettings : Resource
         // Use only exact divisors so every chunk retains its original physical width.
         int step = cells % requestedStep == 0 ? requestedStep : 1;
         return new TerrainParameters(
-            Seed, cells, Mathf.Clamp(CellSize, 0.5f, 3f), radius,
+            Seed, cells, Mathf.Clamp(CellSize, 0.5f, 3f), radius, 2 * radius + 1,
             GenerateCollision, Mathf.Clamp(CollisionChunkRadius, -1, radius), step,
             Mathf.Clamp(MainThreadWarningMs, 1f, 50f),
             Mathf.Clamp(FrameSpikeThresholdMs, 16.7f, 100f),
             BaseHeight, BroadAmplitude, DetailAmplitude, RidgeAmplitude,
             Mathf.Max(20f, ValleyHalfWidth), Mathf.Max(0f, MountainAmplitude),
             Mathf.Max(0f, PeakAmplitude), Mathf.Clamp(PeakSharpness, 1f, 8f),
-            MountainStartZ, Mathf.Min(MountainFullZ, MountainStartZ - 10f),
+            Mathf.Clamp(MountainCoverage, 0f, 1f), MountainStartZ, Mathf.Min(MountainFullZ, MountainStartZ - 10f),
             Mathf.Min(TerrainBottomY, TerrainTopY - 2f), Mathf.Max(TerrainTopY, TerrainBottomY + 2f));
     }
 }
 
 // Immutable managed settings passed to the pure terrain generator.
 public readonly record struct TerrainParameters(
-    int Seed, int CellsPerChunk, float CellSize, int ChunkRadius,
+    int Seed, int CellsPerChunk, float CellSize, int ChunkRadius, int ChunksPerSide,
     bool GenerateCollision, int CollisionChunkRadius, int MeshStep,
     float MainThreadWarningMs, float FrameSpikeThresholdMs,
     float BaseHeight, float BroadAmplitude, float DetailAmplitude, float RidgeAmplitude,
     float ValleyHalfWidth, float MountainAmplitude, float PeakAmplitude, float PeakSharpness,
-    float MountainStartZ, float MountainFullZ, float TerrainBottomY, float TerrainTopY)
+    float MountainCoverage, float MountainStartZ, float MountainFullZ, float TerrainBottomY, float TerrainTopY)
 {
     public float ChunkWidth => CellsPerChunk * CellSize;
 }

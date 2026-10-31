@@ -1,43 +1,79 @@
-// Debug-only F1 settings: choose a finite terrain preset and rebuild without editing WorldMaster.tres.
+// Standalone F1 world-test panel: numeric chunk counts and reusable terrain parameters.
+using System;
+using System.Collections.Generic;
 using Godot;
 
 public partial class WorldTestScene : Node3D
 {
+    private const string ControlsPath = "DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent";
+
     private WorldPreview _world = null!;
+    private WorldScaleTree? _scaleTree;
     private Label _statistics = null!;
     private PanelContainer _settingsPanel = null!;
-    private OptionButton _sizeOption = null!;
-    private OptionButton _detailOption = null!;
-    private Button _regenerateButton = null!;
+    private SpinBox _chunkCount = null!, _seed = null!;
+    private OptionButton _detail = null!;
+    private Button _regenerate = null!, _reset = null!;
 
-    #region Scene and controls
+    private readonly Dictionary<string, HSlider> _sliders = new();
+    private readonly Dictionary<string, Label> _labels = new();
+
+    private static readonly string[] SliderKeys =
+        { "Meadow", "Valley", "Hills", "Mountain", "Peaks", "Sharpness", "Coverage" };
+
+    #region Scene setup
 
     // =========================================================
     public override void _Ready()
     {
         _world = GetNode<WorldPreview>("World");
+        _scaleTree = GetNodeOrNull<WorldScaleTree>("WorldActorsRoot/DebugPropsRoot/ScalePine_14m");
         _statistics = GetNode<Label>("DebugUIRoot/Statistics");
         _settingsPanel = GetNode<PanelContainer>("DebugUIRoot/WorldSettingsPanel");
-        _sizeOption = GetNode<OptionButton>("DebugUIRoot/WorldSettingsPanel/SettingsContent/SizePreset");
-        _detailOption = GetNode<OptionButton>("DebugUIRoot/WorldSettingsPanel/SettingsContent/DetailPreset");
-        _regenerateButton = GetNode<Button>("DebugUIRoot/WorldSettingsPanel/SettingsContent/RegenerateButton");
+        _chunkCount = GetNode<SpinBox>(ControlsPath + "/ChunkCount");
+        _seed = GetNode<SpinBox>(ControlsPath + "/Seed");
+        _detail = GetNode<OptionButton>(ControlsPath + "/DetailPreset");
+        _regenerate = GetNode<Button>(ControlsPath + "/RegenerateButton");
+        _reset = GetNode<Button>(ControlsPath + "/ResetButton");
 
-        // IDs are chunk radii; 2*radius+1 gives 9 / 17 / 27 chunks per side.
-        _sizeOption.AddItem("576 m — 9 x 9 chunks", 4);
-        _sizeOption.AddItem("1,088 m — 17 x 17 chunks", 8);
-        _sizeOption.AddItem("1,728 m — 27 x 27 chunks (9x area)", 13);
-        _sizeOption.Select(_world.CurrentChunkRadius == 4 ? 0 :
-            _world.CurrentChunkRadius == 8 ? 1 : 2);
+        _detail.AddItem("2 m — detailed (step 1)", 1);
+        _detail.AddItem("4 m — lighter (step 2)", 2);
 
-        _detailOption.AddItem("2 m — detailed (MeshStep 1)", 1);
-        _detailOption.AddItem("4 m — lighter (MeshStep 2)", 2);
-        _detailOption.Select(_world.CurrentMeshStep == 2 ? 1 : 0);
+        foreach (string key in SliderKeys)
+        {
+            HSlider slider = GetNode<HSlider>(ControlsPath + "/" + key + "Slider");
+            _sliders.Add(key, slider);
+            _labels.Add(key, GetNode<Label>(ControlsPath + "/" + key + "Label"));
+            slider.ValueChanged += OnSliderValueChanged;
+        }
 
+        ResetControlsToWorldDefaults();
         _settingsPanel.Visible = false;
-        _regenerateButton.Pressed += OnRegeneratePressed;
+        _regenerate.Pressed += OnRegeneratePressed;
+        _reset.Pressed += ResetControlsToWorldDefaults;
         _world.StatisticsChanged += UpdateStatistics;
         UpdateStatistics(_world.StatusText);
     }
+
+    // =========================================================
+    private void ResetControlsToWorldDefaults()
+    {
+        TerrainParameters settings = _world.Settings.Snapshot();
+        _chunkCount.Value = _world.CurrentChunksPerSide;
+        _seed.Value = settings.Seed;
+        _detail.Select(_world.CurrentMeshStep == 2 ? 1 : 0);
+        _sliders["Meadow"].Value = settings.BroadAmplitude;
+        _sliders["Valley"].Value = settings.ValleyHalfWidth;
+        _sliders["Hills"].Value = settings.RidgeAmplitude;
+        _sliders["Mountain"].Value = settings.MountainAmplitude;
+        _sliders["Peaks"].Value = settings.PeakAmplitude;
+        _sliders["Sharpness"].Value = settings.PeakSharpness;
+        _sliders["Coverage"].Value = settings.MountainCoverage * 100f;
+        UpdateSliderLabels();
+    }
+    #endregion
+
+    #region F1 input and generation
 
     // =========================================================
     public override void _Input(InputEvent input)
@@ -54,7 +90,42 @@ public partial class WorldTestScene : Node3D
     // =========================================================
     private void OnRegeneratePressed()
     {
-        _world.RegenerateWorld(_sizeOption.GetSelectedId(), _detailOption.GetSelectedId());
+        // Commit text currently being typed, even if Enter hasn't been pressed.
+        _chunkCount.Apply();
+        _seed.Apply();
+
+        int count = Math.Clamp((int)_chunkCount.Value, 1, 27);
+        int step = _detail.GetSelectedId();
+        TerrainParameters parameters = _world.Settings.Snapshot() with
+        {
+            Seed = (int)_seed.Value,
+            BroadAmplitude = (float)_sliders["Meadow"].Value,
+            ValleyHalfWidth = (float)_sliders["Valley"].Value,
+            RidgeAmplitude = (float)_sliders["Hills"].Value,
+            MountainAmplitude = (float)_sliders["Mountain"].Value,
+            PeakAmplitude = (float)_sliders["Peaks"].Value,
+            PeakSharpness = (float)_sliders["Sharpness"].Value,
+            MountainCoverage = (float)_sliders["Coverage"].Value / 100f
+        };
+
+        _world.RegenerateWorld(count, step, parameters);
+        if (_scaleTree != null && GodotObject.IsInstanceValid(_scaleTree))
+            _scaleTree.SnapToTerrain(parameters);
+    }
+
+    // =========================================================
+    private void OnSliderValueChanged(double value) => UpdateSliderLabels();
+
+    // =========================================================
+    private void UpdateSliderLabels()
+    {
+        _labels["Meadow"].Text = $"Meadow variation: {_sliders["Meadow"].Value:F1} m";
+        _labels["Valley"].Text = $"Valley half-width: {_sliders["Valley"].Value:F0} m";
+        _labels["Hills"].Text = $"Rolling hill height: {_sliders["Hills"].Value:F0} m";
+        _labels["Mountain"].Text = $"Mountain mass: {_sliders["Mountain"].Value:F0} m";
+        _labels["Peaks"].Text = $"Peak height: {_sliders["Peaks"].Value:F0} m";
+        _labels["Sharpness"].Text = $"Peak sharpness: {_sliders["Sharpness"].Value:F2}";
+        _labels["Coverage"].Text = $"Mountain coverage: {_sliders["Coverage"].Value:F0}%";
     }
 
     // =========================================================
@@ -64,8 +135,10 @@ public partial class WorldTestScene : Node3D
     public override void _ExitTree()
     {
         if (GodotObject.IsInstanceValid(_world)) _world.StatisticsChanged -= UpdateStatistics;
-        if (GodotObject.IsInstanceValid(_regenerateButton))
-            _regenerateButton.Pressed -= OnRegeneratePressed;
+        if (GodotObject.IsInstanceValid(_regenerate)) _regenerate.Pressed -= OnRegeneratePressed;
+        if (GodotObject.IsInstanceValid(_reset)) _reset.Pressed -= ResetControlsToWorldDefaults;
+        foreach (HSlider slider in _sliders.Values)
+            if (GodotObject.IsInstanceValid(slider)) slider.ValueChanged -= OnSliderValueChanged;
     }
     #endregion
 }

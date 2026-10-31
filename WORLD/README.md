@@ -1,6 +1,6 @@
 # WORLD — Procedural World Preview
 
-**Status:** The original terrain and the composed 576×576 m mountain layout were inspected by the owner. The world test now defaults to a **1,728×1,728 m, 27×27-chunk static flyover** with an **F1 world-size/detail selector and safe regeneration**. **Large-world Godot performance/visual validation is pending.** This is not streaming, automatic LOD or caves.
+**Status:** The 1,728×1,728 m, 27×27-chunk static preview was tested in Godot and loaded 729/729 chunks. The screenshot revealed a mostly bland plain and an almost continuous overly spiky mountain wall. The next pass adds an **F1 integer chunks-per-side field (1–27)**, seed entry and seven geography sliders; terrain noise is adjusted to create separated mountain groups and more rolling land. **New code awaits Godot validation.** Not streaming, LOD or caves.
 
 **Continuation plan:** [WORLD_IMPLEMENTATION_PLAN.md](WORLD_IMPLEMENTATION_PLAN.md) — owner-run benchmarks, findings, P0/P1/P2 work tickets and acceptance tests for Codex. **Authoring guide:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md). Keep generation, rendering, collisions, future vegetation and LOD under WORLD, separate from PLAYER.
 
@@ -21,7 +21,7 @@ WORLD/
 │   └── WorldTerrain.gdshader          Grassy/rocky slope blend
 └── Debug/
     ├── WorldFlyCamera.cs               Free camera for test environment
-    └── WorldTestScene.cs               HUD, F1 runtime world-size and detail panel
+    └── WorldTestScene.cs               HUD; F1 chunk-count field, seed, terrain sliders, regen
 ```
 
 [SCENE/Scene_World.tscn](../SCENE/Scene_World.tscn) instances WORLD/World.tscn and **does not require PLAYER**.
@@ -33,30 +33,54 @@ WORLD/
 ## Run and inspect
 
 1. Pull Ben Final, build C# in Godot 4.7.2 .NET, open `SCENE/Scene_World.tscn`, press **F6**.
-2. Press **F1** to show/hide the **World Test** panel. F1 opens the mouse cursor for UI, and closes it to resume mouse-look. Select a **size preset**, optionally select uniform detail, and click **Regenerate world**.
+2. Press **F1** to show/hide the **World Generator** panel. The cursor is freed for editing. Enter **chunks per side**, e.g. `9` = **9 × 9 = 81** chunks; `10` = **10 × 10 = 100** chunks. Set the seed, adjust geography sliders and uniform mesh detail, then click **Regenerate world**.
 3. The scene removes prior terrain in frame-budgeted batches, cancels its old worker job, then generates the new terrain centre-outward. The stats HUD shows current extent, installed chunks, triangles, CPU/mesh/collision timings and limited spike diagnostics.
 4. Fly with WASD/arrow keys, Q/E height and Shift faster; Escape releases the mouse. Default free-fly speed is **60 m/s**, or **180 m/s with Shift**.
-5. For permanent startup defaults and geology, edit `WORLD/Configuration/WorldMaster.tres` before running F6. The F1 panel changes **runtime configuration only**; it does not save the resource.
+5. For permanent startup defaults, edit `WORLD/Configuration/WorldMaster.tres` before F6. The F1 panel changes **runtime-only settings** and does not overwrite the saved resource. **Reset sliders to saved defaults** restores values in the panel but does not regenerate until you click Regenerate.
 
-### F1 size and detail presets (current)
+### F1 world-size and geography controls
 
-| Preset | Radius | Chunk grid | Extent | Approx. ground area |
-| --- | ---: | ---: | ---: | ---: |
-| Small | 4 | 9×9 = 81 | 576×576 m | 0.33 km² |
-| Medium | 8 | 17×17 = 289 | 1,088×1,088 m | 1.18 km² |
-| **Large (default)** | **13** | **27×27 = 729** | **1,728×1,728 m** | **2.99 km²** |
+**World size:** `Chunks per side` is a numeric SpinBox that accepts **any integer from 1 through 27**. Each chunk is currently 64×64 metres at the default `CellsPerChunk=32, CellSize=2`. Examples:
 
-All presets retain **64 m per chunk** (`CellsPerChunk=32`, `CellSize=2 m`). Thus the large area is **nine times the former 576 m world area**, not nine times each linear dimension. `MeshStep=1` retains **2 m cell resolution**; choosing the lighter `MeshStep=2` samples every **4 m**, reducing polygons at the cost of nearby surface detail. Do not confuse this uniform detail choice with distance-LOD streaming.
+| Enter | Generated chunks | Physical world width |
+| ---: | ---: | ---: |
+| 9 | **9×9 = 81** | 576 m |
+| 10 | **10×10 = 100** | 640 m |
+| 17 | **17×17 = 289** | 1,088 m |
+| 27 | **27×27 = 729** | 1,728 m |
 
-**Rebuild safety and limits:** only **one generator** may run at once; cancellation ignores stale mesh queues, at most **six completed CPU meshes** await installation, old chunk nodes are freed in batches of **12 per frame**, and mesh/collider creation is capped at **one operation per frame**. After the static preview completes, terrain processing stops. The **large preset intentionally retains all 729 meshes** after loading (no unloading) and may use considerable memory and take longer to finish. Try medium or lighter resolution if the GPU or editor struggles. F1 can be opened during generation; regeneration cancels/replaces pending work.
+Even values are supported: for `10×10`, the stable integer coordinates run -5 through +4 on each horizontal axis; for `9×9` they run -4 through +4. The displayed total and number of generated chunks match the actual input.
+
+**Uniform mesh detail:** choose `MeshStep = 1` (2 m surface sampling) or `MeshStep = 2` (4 m). This is an entire-world quality comparison, not streamed distance-based LOD.
+
+**Generator controls (all applied only by Regenerate):**
+
+| F1 control | New saved default | Effect |
+| --- | ---: | --- |
+| World seed | 147 | Reproducible geography |
+| Meadow variation | 8 m | Broad lowland height noise, higher = less uniform green plain |
+| Valley half-width | 90 m | Width of the meandering flatter corridor |
+| Rolling hill height | 30 m | Foothill and scattered meadow-hill relief |
+| Mountain mass | 95 m | Broad mountain uplift |
+| Peak height | 80 m | Additional sharp crest elevation |
+| Peak sharpness | 2.75 | Larger = narrower/spikier crests; lower = broader peaks |
+| Mountain coverage | 65% | Broad world-space mask controlling how much of the northern/flank zone becomes mountain groups |
+
+**Performance and regeneration:** one worker runs at a time, a **six-result** bounded CPU mesh queue limits producer backlog, existing chunks are removed in batches of **12 per frame**, and at most one mesh or collider is installed per frame. The old generation is cancelled and stale results discarded when you press Regenerate again. The scale tree is resnapped to the new seed/heights; it can still be removed entirely from `WorldActorsRoot/DebugPropsRoot`. After loading, all chunks stay resident—this remains a **static world**, so 27×27 is much more resource-intensive than 9×9.
+
+**Known limitation:** the North mountain layout is defined in *world metres* rather than relative fractions of each selected map width. Changing chunk count reveals more or less of one **consistent larger procedural geography**, not a resized copy of a fixed layout. This is deliberate for eventual streaming. The new mountain coverage mask reduces the old wall, and peak noise is less frequent, but visual suitability is **not yet verified**.
+
+### Owner's large static-world screenshot (before geography-slider update)
+
+The 27×27 test reached **729/729 chunks** with **2,157,117 vertices** and **4,136,496 triangles**; the HUD reported **2,727.4 ms total CPU meshing**, **566.6 ms mesh setup**, **6.2 ms centre-collider cooking**, **110.4 ms worst observed frame delta** and **2 frames above 33.3 ms**. These are startup/loading measurements, **not sustained FPS**. The owner found the large plains visually bland and the peaks too uniformly spiky. The updated defaults and coverage logic address that design issue; **do not claim performance improvement without a new Godot run**.
 
 ### BW-W3A terrain layout — new reference composition
 
 The test camera starts near **(8, 63, 240)** looking toward **negative Z / north**. The 14 m `ScalePine_14m` remains near **(8, ground height, 90)**. Current seed is 147.
 
-- **Foreground (positive Z):** a broad, gently uneven meadow/valley corridor with low noise, suitable for later paths, structures and vegetation.
+- **Foreground (positive Z):** a broad meadow/valley corridor with gentle elevation noise and isolated mid-sized hill masses; still suitable for future paths and structures.
 - **Middle ground (roughly Z 80 to -100):** rolling side foothills that rise smoothly outside the meandering valley, not random peaks spread over every metre.
-- **Far ground (negative Z, especially beyond about -100):** a broad connected mountain range plus sharper secondary crests. The transition is masked and warped in world metres, so it is coherent and deterministic across chunks.
+- **Far ground (negative Z, especially beyond about -100):** several broad world-space mountain groups separated by clearer lower passes; lower-frequency ridge detail replaces the previous uniform spiky wall. Mask and peak settings are deterministic across chunk boundaries.
 - **Material:** existing green/rock blending is preserved; a subtle high-altitude light-stone/snow tint improves silhouette readability, without imported textures or vegetation.
 
 **Key Inspector controls** in `WORLD/Configuration/WorldMaster.tres` (defaults are tentative, not visually approved):
@@ -64,23 +88,24 @@ The test camera starts near **(8, 63, 240)** looking toward **negative Z / north
 | Group | Setting | Default | Purpose |
 | --- | --- | ---: | --- |
 | Lowlands | `BaseHeight` | 14 m | Basic meadow elevation |
-| Lowlands | `BroadAmplitude` / `DetailAmplitude` | 4 / 1.5 m | Gentle foreground waviness |
+| Lowlands | `BroadAmplitude` / `DetailAmplitude` | 8 / 1.5 m | Stronger broad waviness plus small-scale variation |
 | Lowlands | `ValleyHalfWidth` | 90 m | Width of central flatter corridor |
-| Foothills | `RidgeAmplitude` | 18 m | Rolling hill uplift (original export name retained) |
+| Foothills | `RidgeAmplitude` | 30 m | Rolling hills and separate meadow rises |
 | Mountains | `MountainAmplitude` | 95 m | Large connected background uplift |
-| Mountains | `PeakAmplitude` / `PeakSharpness` | 80 m / 4 | Sharp ridge additions and crest narrowness |
-| Mountains | `MountainStartZ` / `MountainFullZ` | -40 / -220 m | Northward rise start and near-full mountain mask |
+| Mountains | `PeakAmplitude` / `PeakSharpness` | 80 m / 2.75 | Wider ridges by default (sharpness remains adjustable) |
+| Mountains | `MountainCoverage` | 0.65 | Mask for separated mountain groups / lower passes |
+| Mountains | `MountainStartZ` / `MountainFullZ` | -40 / -220 m | Northward rise start and near-full range influence |
 | Vertical range | `TerrainBottomY` / `TerrainTopY` | -16 / 300 m | Limits supported surface elevations, independent of 64 m chunk width |
 
 The mesher still samples **only cells around the surface**; it does not allocate an `81 × 300m` volumetric density grid. Raising the vertical range increases supported height **without making the horizontal chunks any larger**. The surface remains a height-derived density (`Height(x,z)-y`): steep mountain walls are possible, **true caves/overhangs are not**. Same-resolution seams still need checking.
 
-To test: build C#, F6 `SCENE/Scene_World.tscn`, let the selected chunk count finish (729 by default), fly from the meadow toward negative Z, and compare the ridge line from both aerial and low-altitude views. Check no flat-topped clipping, holes, major polygon spikes or collision errors; note the per-chunk CPU/mesh timing. Adjust `MountainAmplitude`, `PeakAmplitude`, `ValleyHalfWidth` and `PeakSharpness` one at a time. **Do not infer FPS improvement from the original small-world measurements:** this is a different seed-based terrain function with greater relief.
+To test: build C#, F6 `SCENE/Scene_World.tscn`, let the selected chunk count finish (729 by default), fly from the meadow toward negative Z, and compare the ridge line from both aerial and low-altitude views. Check no flat-topped clipping, holes, major polygon spikes or collision errors; note the per-chunk CPU/mesh timing. Adjust F1 Meadow / Hills / Mountain Coverage / Peak Sharpness, one at a time, then click Regenerate to compare. **Do not infer FPS improvement from the original small-world measurements:** this is a different seed-based terrain function with greater relief.
 
 ### Recommended performance controls
 
 | Property | Default | Meaning |
 | --- | ---: | --- |
-| `ChunkRadius` | 13 | 27×27 (729) chunks. F1 provides radii 4, 8 and 13; resource supports 0–13 |
+| `ChunkRadius` | 13 | Saved *startup* setting for 27×27. The F1 field directly accepts 1–27 chunks per side, including even counts |
 | `CellsPerChunk` | 32 | Nominal cells along each chunk axis |
 | `CellSize` | 2.0 m | New large-world preset: 32 × 2 m = **64 m per chunk**, 9 × 64 m = **576 m across**. Earlier screenshot baseline used 1.0 m |
 | `MeshStep` | 1 | Current 2 m sampling; 2 = 4 m sampling; 4 = 8 m sampling. **Physical chunk width remains 64 m** |
@@ -97,7 +122,7 @@ The new mesher **reuses its already-computed surface heights for interior normal
 
 - Terrain geometry is generated by **one serialized CPU worker** into a **bounded six-mesh queue** with no persistent streaming. Chunks are generated **centre-outward** for useful near-camera content first, and old chunks are freed gradually during F1 regeneration.
 - **One main-thread operation per frame:** mesh setup and expensive trimesh collider creation are performed in separate frames, not together.
-- Collision defaults to the **centre chunk only**, avoiding the unnecessary static-physics setup for the eight surrounding demonstration chunks. Change the collision radius if you need to walk on surrounding chunks.
+- Collision defaults to the **centre chunk only**, avoiding distant static-physics setup for the hundreds of surrounding demonstration chunks. Change the collision radius if you need to walk on surrounding chunks.
 - The first few, last and any slow chunks print CPU/mesh timings and triangle count; slow collision work is also logged. The HUD summarizes totals/maxima without dumping 729 log lines.
 - Each individual operation can log a slow warning. **Observed frame delta** is sampled while constructing the static preview and for **30 additional frames** after the final chunk, then the world disables its processing. Spikes are tagged according to the preceding frame's mesh/collider/other activity as correlation clues **not proven causes**.
 - `MeshStep` gives a **fair same-area resolution comparison** rather than shrinking the world to reduce polygon count. Coarser steps may remove subtle ridges and are not claimed visually equivalent.

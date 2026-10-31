@@ -74,38 +74,152 @@ text = "Preparing terrain..."
 visible = false
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -330.0
+anchor_bottom = 1.0
+offset_left = -410.0
 offset_top = 12.0
 offset_right = -12.0
-offset_bottom = 290.0
+offset_bottom = -12.0
 mouse_filter = 1
 
-[node name="SettingsContent" type="VBoxContainer" parent="DebugUIRoot/WorldSettingsPanel"]
+[node name="PanelScroll" type="ScrollContainer" parent="DebugUIRoot/WorldSettingsPanel"]
 layout_mode = 2
-theme_override_constants/separation = 8
+size_flags_horizontal = 3
+size_flags_vertical = 3
 
-[node name="PanelTitle" type="Label" parent="DebugUIRoot/WorldSettingsPanel/SettingsContent"]
+[node name="SettingsContent" type="VBoxContainer" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll"]
 layout_mode = 2
-text = "WORLD TEST — F1 SETTINGS"
+size_flags_horizontal = 3
+theme_override_constants/separation = 7
 
-[node name="SizeLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/SettingsContent"]
+[node name="PanelTitle" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
-text = "World size (same 64 m chunks)"
+text = "WORLD GENERATOR — F1"
 
-[node name="SizePreset" type="OptionButton" parent="DebugUIRoot/WorldSettingsPanel/SettingsContent"]
+[node name="ChunkLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Chunks per side (9 = 9 x 9)"
+
+[node name="ChunkCount" type="SpinBox" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+min_value = 1.0
+max_value = 27.0
+step = 1.0
+value = 27.0
+rounded = true
+
+[node name="DetailLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Sampling detail (uniform, no distance LOD)"
+
+[node name="DetailPreset" type="OptionButton" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
 
-[node name="DetailLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/SettingsContent"]
-layout_mode = 2
-text = "Uniform terrain resolution"
 
-[node name="DetailPreset" type="OptionButton" parent="DebugUIRoot/WorldSettingsPanel/SettingsContent"]
+[node name="SeedLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
+text = "World seed"
 
-[node name="RegenerateButton" type="Button" parent="DebugUIRoot/WorldSettingsPanel/SettingsContent"]
+[node name="Seed" type="SpinBox" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+min_value = 0.0
+max_value = 99999.0
+step = 1.0
+value = 147.0
+rounded = true
+
+[node name="MeadowLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Meadow"
+
+[node name="MeadowSlider" type="HSlider" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+min_value = 0.0
+max_value = 25.0
+step = 0.5
+value = 8
+size_flags_horizontal = 3
+
+[node name="ValleyLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Valley"
+
+[node name="ValleySlider" type="HSlider" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+min_value = 20.0
+max_value = 300.0
+step = 5
+value = 90
+size_flags_horizontal = 3
+
+[node name="HillsLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Hills"
+
+[node name="HillsSlider" type="HSlider" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+min_value = 0.0
+max_value = 80.0
+step = 1
+value = 30
+size_flags_horizontal = 3
+
+[node name="MountainLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Mountain"
+
+[node name="MountainSlider" type="HSlider" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+min_value = 0.0
+max_value = 200.0
+step = 5
+value = 95
+size_flags_horizontal = 3
+
+[node name="PeaksLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Peaks"
+
+[node name="PeaksSlider" type="HSlider" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+min_value = 0.0
+max_value = 150.0
+step = 5
+value = 80
+size_flags_horizontal = 3
+
+[node name="SharpnessLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Sharpness"
+
+[node name="SharpnessSlider" type="HSlider" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+min_value = 1.0
+max_value = 8.0
+step = 0.25
+value = 2.75
+size_flags_horizontal = 3
+
+[node name="CoverageLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Coverage"
+
+[node name="CoverageSlider" type="HSlider" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+min_value = 0.0
+max_value = 100.0
+step = 5
+value = 65
+size_flags_horizontal = 3
+
+[node name="RegenerateButton" type="Button" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
 text = "Regenerate world"
 
-[node name="PanelHint" type="Label" parent="DebugUIRoot/WorldSettingsPanel/SettingsContent"]
+[node name="ResetButton" type="Button" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
-text = "Replaces current terrain; large worlds load longer.\nF1 to hide and resume flying."
+text = "Reset sliders to saved defaults"
+
+[node name="PanelHint" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Terrain changes only after Regenerate.\nF1 hides panel; original world settings remain saved."
+
