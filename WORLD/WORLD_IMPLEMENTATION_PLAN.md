@@ -4,7 +4,7 @@
 >
 > **Repository:** `ben0kay/ben-final` — current development branch `main`.
 > **Last documented user tests:** October 30, 2026 (Godot 4.7.2 .NET, screenshots supplied in chat).
-> **State:** The owner ran **27×27 = 729 chunks (1,728 m)** in Godot and found the lowlands bland and the mountains a continuous wall of thin spikes. The F1 panel now accepts **1–100 chunks per side**, any integer, and exposes seven terrain sliders plus seed and mesh detail; the default terrain now has more rolling relief and broad mountain coverage masks. **The new pass awaits local validation.** Streaming, mixed LOD, caves, vegetation and persistence remain unimplemented.
+> **State:** The owner ran **27×27 = 729 chunks (1,728 m)** in Godot and found the lowlands bland and the mountains a continuous wall of thin spikes. The F1 panel now accepts **1–100 chunks per side**, any integer, and exposes seven terrain sliders plus seed and mesh detail; the revised terrain/input awaits local validation. **New priority:** establish genuinely smooth terrain streaming, then opt-in disposable tree/grass/prop/dummy-entity stress tests **before any War Machine gameplay port**. Streaming, mixed LOD, water, caves, vegetation systems, and persistence remain **unimplemented**.
 >
 > **Companion documents:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md) explains the intended geology/terrain techniques; [README.md](README.md) explains existing files and how to run them; [root README](../README.md) tracks the project's milestone statuses; [CodePreferences](../CodePreferences.md) and [AGENTS](../AGENTS.md) govern coding and Git practice.
 
@@ -169,9 +169,27 @@ The F1 panel displays the selected chunk count and world width, plus a high-load
 
 **Acceptance:** Reproducible generation for the same seed regardless of chunk construction order, robust same-LOD seams and a manual close-up comparison at steps 1 and 2.
 
+### BW-W4 programme — Prove streaming under disposable content before gameplay imports
+
+**Owner direction (November 1, 2026):** Ben Final is a new finite-island survival project. Before moving selected War Machine systems into it, prove reliable, low-hitch terrain generation/residency and progressively test **temporary** vegetation, props and simple moving entities. All stress content must be opt-in and removable without deleting the reusable streaming engine. This section supersedes the old suggestion to immediately port War Machine content or scale up static resident grids.
+
+**System boundaries:** One world-level desired/resident chunk policy should decide *where content is relevant*. Separate owners manage **terrain mesh data**, **GPU mesh nodes**, **near terrain collision**, **foliage MultiMeshes**, **static props** and **active actor simulation**, each with independent budgets and safe teardown. Terrain generation must remain world-seeded and order-independent. The finite island can have large logical bounds without allocating or generating the entire area.
+
+**Prior architecture evidence:** `ben0kay/2d-isometric` has `WORLD/Chunks/ChunkStreamer.cs` with nearby-first requested columns and load/unload hysteresis. War Machine's `implement-td0-td1` branch has `WORLD/Streaming/StaticSectionStreamer.cs` with bounded jobs, asset residency and cleanup, but **that implementation streams static prefabs/buildings, not terrain**. Adapt their policies; **do not copy foreign terrain plugins or pipelines**. Ben Final's `WorldPreview` already has a bounded CPU mesh queue, cancellation and single-operation-per-frame integration, but is currently **finite static build only**, not camera-following streaming.
+
+**Critical visibility constraint:** The debug camera currently has a 4,300 m far clip, while nine 64 m terrain chunks per side cover only 576 m across. An initial 9×9 streamer would visibly end close to the camera if that entire far range is left exposed. Either deliberately shorten the effective visibility with fog/far plane during the first residency proof or supply a separate cheap distant-terrain representation later. **Do not solve this by keeping thousands of full-resolution chunks resident.**
+
+### BW-W4.0 — Reproducible benchmark and streaming observability (FIRST TICKET; PLANNED)
+
+- Preserve `SCENE/Scene_World.tscn` static F1 mode for A/B comparison; add an explicitly optional streaming stress-test path (independent debug scene or F1 opt-in). Avoid changing playable project startup or island data.
+- Instrument **generation CPU**, worker queue wait, main-thread `ArrayMesh` creation/upload, `MeshInstance3D` attachment, trimesh collision construction/removal, GPU/vegetation batch uploads (later), actor spawn/despawn (later) and garbage collection where measurable. Sample actual per-frame deltas *even when no work is active*. Track median, p95, p99, worst frame, stutters over 33.3 ms, chunk-request latency and warm vs cold traversal.
+- Report **desired, queued, computing, ready, resident, collider-ready and unloading chunk counts**, resident triangle count, bounded result-buffer size, load/unload counts and memory estimates/available engine counters. Don't treat total mesh-build milliseconds or FPS alone as proof of no hitch.
+- A repeatable camera route should cover ordinary speed, current 180 m/s Shift fly, rapid reversing, 2 km teleport, return to old positions, regeneration during loading, and scene stop/restart. Record Godot version, display resolution, graphics settings, warm/cold shaders and route, plus RAM/VRAM where accessible.
+- **Acceptance:** The current static baseline can be reproduced, diagnostic counters tell *which stage* correlates with frame spikes, and no high-frequency logging itself adds stalls. No fabricated or assumed timings. **Status: Planned; owner must approve implementation of one ticket at a time.**
+
 ### BW-W4.1 — Real streaming and chunk residency (P1)
 
-**Prerequisite:** W1 spike diagnosis, W2 seam/coordinate correctness.
+**Prerequisite:** BW-W4.0 benchmark/diagnostics and W2 seam/coordinate sanity checks. Treat unresolved W1 >100 ms startup anomalies as part of the baseline rather than ignoring them.
 
 - Replace static full-grid initialization with player/camera-centered requests keyed by stable integer chunk coordinates.
 - Separate chunk **data generation**, **GPU mesh residency**, **collision residency** and **world object/foliage residency**.
@@ -179,7 +197,9 @@ The F1 panel displays the selected chunk count and world width, plus a high-load
 - Update only when the camera crosses a threshold/region or a relevant setting changes; use hysteresis. Avoid full world scans and needless work every frame.
 - Measure high-speed traversal and camera teleport; do not queue unlimited chunks or leave holes indefinitely.
 
-**Acceptance:** Camera crosses multiple chunk boundaries and only a bounded number of chunks/resources/jobs remain resident; no crash or stale chunk installs; record frame spikes and memory.
+**First implementation scope:** Same-resolution **64 m terrain chunks only**, finite logical bounds from the island/world configuration, and a small default resident envelope (suggest **9×9 around the fly camera** plus a deliberately bounded unload buffer). Keep the same world-seed and terrain settings; reject obsolete tasks using generation IDs, dedupe coordinates, and rank near/forward-visible requests ahead of less useful ones. Only compute a bounded amount of pending work; limit installation by **measured milliseconds as well as operation count**, because one large mesh/collider can stall despite a one-op-per-frame rule. Use load/unload hysteresis and a resident cap with explicit behaviour when all slots are occupied. When idle, stop scheduling work.
+
+**Acceptance:** Camera crosses multiple boundaries and only a bounded number of chunks/resources/jobs remain resident, with no stale installs, duplicate meshes, accumulating abandoned buffers or missing current-area chunks. Full scene stop/return, teleport, regeneration and rapid direction reversals must be safe. Test collision readiness separately for eventual FPS movement. Record p99/worst frame deltas, latency and memory. **Status: Planned.**
 
 ### BW-W4.2 — Actual near/far LOD with valid transitions (P1/P2)
 
@@ -192,6 +212,30 @@ The F1 panel displays the selected chunk count and world width, plus a high-load
 - Limit expensive collision to near regions and avoid per-LOD collider churn.
 
 **Acceptance:** No visible cracks between step 1/2/4 neighbours, LOD switching is stable while moving and temporal artifacts are acceptable; measured triangle, CPU/GPU time and memory at fixed view distances.
+
+### BW-W4.3 — Disposable vegetation streaming stress fixtures (PLANNED; after terrain residency)
+
+- Add **test-only generated** tree variants, grass/fern/bush clumps and region-density presets. These stand in for later authored War Machine foliage; do **not** import War Machine assets yet.
+- Place deterministically from world seed and chunk/world coordinates. Test dense forest edges, clearings, grass beds, mixed slopes and empty regions. Preserve the ability to author future island vegetation zones without tying foliage to terrain mesh ownership.
+- Use chunk/region `MultiMeshInstance3D` batches instead of one node per grass blade/tree. Compare shadows on/off, sparse vs heavy densities, near/far ranges and alpha overdraw. Do not give distant grass physics.
+- Instrument generation, bulk instance uploads, memory, render primitives/draw calls and frame-time spikes. Enforce bounded build/disposal work; unloading terrain must not orphan vegetation.
+- **Acceptance:** Walk/fly past the same forest repeatedly and check that all temporary foliage reappears identically, with stable batch counts, no permanent memory growth and no unexplained streaming stalls. **Dispose of test models after performance acceptance, not the reusable placement contracts.**
+
+### BW-W4.4 — Disposable props and moving-entity stress fixtures (PLANNED)
+
+- Add separate opt-in test-only crate/rock/placeholder-building placements and a configurable group of simple moving dummy actors. No combat AI, inventory, world-save contract or transferred War Machine scenes.
+- Use stable deterministic placement/actor IDs; define which content is persistent in world description versus temporarily active in scene tree. A chunk unloaded and reloaded must never duplicate props or actors.
+- Budget spawn/despawn, near collision setup and simulated entity ticks separately from terrain and foliage. Far actors sleep or despawn by policy; do not continue updating 500 distant entities simply because their meshes are hidden.
+- Stress-test fast movement, boundary oscillation, teleport, density changes, return trips, entering occupied chunks and scene reload. Report per-stage timings and counts.
+- **Acceptance:** Temporary actors and props consistently appear/disappear with no duplicate instances, broken physics, unbounded updates, cross-frame crash or runaway memory. The generic residency hooks survive fixture deletion. **Status: Planned.**
+
+### BW-W4.5 — Streaming stability gate and cleanup (PLANNED)
+
+- Repeat a documented **five-minute** traversal route on the target test PC, for **terrain-only**, **terrain+vegetation** and **full disposable load**. Record **cold** first traversal and **warm** return separately; allow first-use shader compilation to be identified, not hidden.
+- **Initial engineering targets, not guarantees:** sustained gameplay target ~60 FPS (16.7 ms per frame); aim for **p99 ≤25 ms** and no repeatable **streaming-induced frame above 33.3 ms** after warm-up during ordinary traversal. Teleport, first-use shader compilation and editor overhead should be reported separately. If hardware misses the target, profile and tune rather than mark accepted.
+- Verify that resident/pending object counts plateau, no old jobs reattach after teleport/regeneration, no crashes after backtracking, and CPU/GPU/RAM use stays within an observed reasonable budget. Startup time and peak memory are also part of acceptance.
+- Remove or disable all placeholder trees, grass, props and entities from the actual game scene **after** measurements while preserving generic stream coordination, test harness, data contracts and diagnostics. Keep a repeatable disposable benchmark scene or generator available for future regression tests.
+- **War Machine porting is gated:** no weapons, zombies, buildings or final art enter Ben Final until this gate is reviewed with the owner. Re-test incrementally after each real system is introduced.
 
 ### BW-W3A — Composed geography (IMPLEMENTED IN SOURCE; AWAITING OWNER VALIDATION)
 
@@ -245,8 +289,8 @@ The reference layout is **foreground meadows / winding lowland valley → side f
 
 1. Read [../AGENTS.md](../AGENTS.md), [../CodePreferences.md](../CodePreferences.md), [../README.md](../README.md), [WORLD_AUTHORING.md](WORLD_AUTHORING.md), this plan, and [WORLD README](README.md).
 2. Inspect current `WORLD/WorldPreview.cs`, `Generation/MarchingCubesMesher.cs`, `Generation/DensityGenerator.cs`, `Configuration/WorldSettings.cs` / `WorldMaster.tres`, and the world test scene; do **not** assume this snapshot is still current.
-3. Confirm with the owner which **one ticket** is authorized. By default, **propose BW-W1.1 startup-spike diagnosis before implementation of streaming or distance LOD**.
+3. Confirm with the owner which **one ticket** is authorized. The **current first choice is BW-W4.0 instrumentation/baseline**, incorporating the old BW-W1.1 startup-spike investigation before starting BW-W4.1. Do not bundle the later foliage/actor stress fixtures into one giant pass.
 4. Keep `Scene_World` independently runnable, preserve visible terrain and follow the short-check policy. State **tests performed vs unverified**, and don't fabricate benchmark numbers.
 5. Update this plan's status/findings and the root README's milestone status when verified scope changes. Add a root lessons entry only for a significant reusable confirmed mistake.
 
-**Latest conclusion:** Keep `MeshStep=1` as a near-terrain quality baseline and treat `MeshStep=2` as a promising candidate for medium/distant terrain, **not an adopted production LOD**. The unresolved >100 ms startup frame deltas and future mixed-resolution seams are the next major risks to investigate.
+**Latest conclusion (priority revised November 1, 2026):** **No War Machine gameplay imports yet.** First instrument and prove camera-following terrain residency, then distance representation and **disposable** vegetation/prop/actor stress testing, then remove benchmark objects. Keep `MeshStep=1` as the near-terrain baseline and `MeshStep=2` as a candidate for further tests, not working LOD. The existing >100 ms startup frame deltas, main-thread setup spikes and future LOD joins remain risks to diagnose before a seamlessness claim.

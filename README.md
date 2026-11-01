@@ -43,6 +43,22 @@ The project continues to use a **custom Godot 4 C# terrain foundation** (marchin
 - Keep gameplay-critical locations accessible and ensure required plane components remain obtainable. Randomness can vary optional loot, encounters and environmental detail, but must not make the main objective impossible.
 - The ocean is a natural world boundary, not proof of implemented swimming, boats, underwater simulation or an invisible wall. Those rules can be decided later.
 
+### Immediate development priority — streaming reliability before War Machine imports
+
+**Current instruction:** Do not port War Machine gameplay assets or systems yet. First make **Ben Final's finite-world terrain streaming and frame-time stability demonstrably reliable**, then stress-test the **shared world-residency architecture** with disposable scenery and dummy entities. The island vision above remains the target; these experiments are a temporary engineering phase, not permanent gameplay content.
+
+The testing programme is intentionally cumulative:
+
+1. **Terrain only:** camera-following chunk requests, nearest/visible-first priority, bounded background meshing, main-thread mesh-install budgets, actual unloading and separate nearby collision readiness. Keep the present static flyover as an A/B fallback.
+2. **Distant terrain and traversal:** prevent obvious missing horizons by coordinating fog/view distance and, later, proper far LOD/proxies. Test normal flight, sprint-speed flight, 180 m/s fast flight, abrupt reversals, teleports and returning to previously visited chunks.
+3. **Disposable vegetation:** seed-deterministic placeholder trees, grass, ferns and bushes in varied density zones. Use per-region MultiMesh batches; stress CPU scatter, GPU uploads, draw calls, shadow/alpha cost, near collision and teardown. **No permanent vegetation asset commitment.**
+4. **Disposable props and entities:** spawned rocks/crates/structures and simple moving actors, with controlled density, collision and activity budgets. Verify stable IDs, no duplicate instances, unload/reload and no runaway simulation. These are **not** War Machine assets or permanent AI.
+5. **Stress-test sign-off and cleanup:** compare cold first visits with warm revisits, collect average/p95/p99/worst frame times, load latency, resident counts and peak RAM/VRAM across repeatable routes. Remove the temporary content after acceptance while retaining the streaming scheduler, diagnostics, test methods and learnings.
+
+**Performance gate:** target 60 FPS on the intended baseline PC and **no noticeable streaming-induced stalls in ordinary traversal**. Track p99 and worst frames, not only FPS. Proposed first acceptance thresholds and workloads belong in [WORLD/WORLD_IMPLEMENTATION_PLAN.md](WORLD/WORLD_IMPLEMENTATION_PLAN.md); these are **targets to validate, not accomplished results or guarantees**. If a pass hitches, isolate CPU generation, mesh upload, physics cooking, instancing, shader warm-up, GPU overdraw or garbage collection before adding another layer.
+
+**Architecture boundary:** coordinate terrain, vegetation, props and nearby actor activation through **one world-level residency policy** but let each category retain its own resource lifecycle and performance budget. Never make every temporary test object a separate always-running manager. Test fixtures should live under dedicated debug/test ownership (e.g. `DEBUG/WorldStreaming/`), not become dependencies of final gameplay scenes. Only after this gate passes should selected War Machine systems be transferred one by one.
+
 ## Core development approach: independent scenes
 
 Build each subsystem in its own scene and test environment; bring them together later through **scene instancing and shared contracts**, not by merging unrelated source code or making one monolithic test scene.
@@ -195,7 +211,8 @@ The terrain vision is **a coherent finite island**: varied coastline and ocean, 
 | **BW-W2** | Adjacent chunk generation | Static centre-out NxN grid (1–100 chunks per side) with F1 validated world-size input and safe regeneration; seam checks pending | **Awaiting Validation** |
 | **BW-W3A** | Composed geography | Original pass owner-tested (too flat + wall of spikes). New broad rolling hill masses, mountain coverage mask and seven shaping sliders implemented | **Awaiting Validation** |
 | **BW-W3B** | True 3D caves and overhangs | Full volumetric density, vertical chunk ownership, cave entrances, editable terrain and basements | **Planned** |
-| **BW-W4** | Streaming and LOD | Loading/unloading, distance LOD and transition geometry; initial preview has only a one-worker finite generation queue | **Planned** |
+| **BW-W4** | Streaming and LOD | Camera-centred terrain residency, bounded load/unload queues, collision readiness, distance LOD and transitions; current preview still retains all generated chunks | **Planned — next priority** |
+| **BW-W4T** | Disposable streaming stress tests | Temporary trees/grass/ferns, props and dummy actors; repeatable fast-travel tests, frame-time/memory instrumentation and cleanup **before War Machine imports** | **Planned — gated on BW-W4 foundations** |
 | **BW-W5** | Forest and atmosphere pass | Terrain materials, grass, pine trees, zone-based procedural ferns/undergrowth, vegetation LOD/instancing, lighting/fog | **Planned** |
 | **BW-W6** | Finite island and ocean | Approved island land mask, sea level, beaches/rocky shores, coast-to-water transition and world boundary | **Planned** |
 | **BW-W7** | Region authoring | Author-defined forests, meadows, clearings and no-spawn zones; deterministic foliage based on region masks | **Planned** |
@@ -210,7 +227,7 @@ The terrain vision is **a coherent finite island**: varied coastline and ocean, 
 
 ### Recommended next implementation sequence
 
-Keep the independent `SCENE/Scene_World.tscn` and `SCENE/Scene_Player.tscn` tests. First validate the current generator and establish bounded **BW-W4 terrain streaming** for manageable performance. Next design **BW-W6 island geometry and shoreline/water** by iterating on a fixed seed. Define authored region/site contracts (**BW-W7/BW-B2**) before filling the island with foliage or important buildings. Integrate player traversal, gathering/crafting and the plane escape objective in separate small, testable milestones. **These are recommendations, not authorization to implement all phases.**
+Keep the independent `SCENE/Scene_World.tscn` and `SCENE/Scene_Player.tscn` tests. **Next complete BW-W4 terrain streaming, then BW-W4T disposable vegetation/prop/actor stress tests and traversal benchmarks before importing War Machine systems.** Retain static mode for comparison; only accept smoothness after local cold/warm profiling and no persistent resource growth. Remove disposable content after acceptance. Then build **BW-W6 finite-island geography, shoreline and water**, define approved region/site contracts (**BW-W7/BW-B2**) and add selected gameplay systems one at a time. Integrate player traversal, gathering/crafting and the plane escape objective in separate focused milestones. **This sequence is a priority/plan, not evidence that streaming or stress tests are already implemented.**
 
 Advance to later milestones only after the previous implementation is reviewed. A Git commit or a compiling project is not proof of acceptable visual quality, correct caves or smooth FPS.
 

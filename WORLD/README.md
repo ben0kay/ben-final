@@ -164,3 +164,11 @@ To test cheaper geometry across any one selected patch, use F1 to choose `MeshSt
 Verify all **729** terrain chunks show the intended meadow/foothills/mountains without unexpected flat tops or missing cliff surfaces, preserve the earlier black-terrain winding/lighting fix, inspect same-resolution borders, confirm only the intended colliders exist, and check Godot **Output** for per-chunk timing warnings. Startup spikes may be acceptable for this static loading test; gameplay streaming stutter remains a future concern.
 
 The next unimplemented systems are true streaming/residency, distance-dependent LOD transition geometry, caves and vegetation. See [root roadmap](../README.md).
+
+## Streaming reliability gate — next development priority (PLANNED)
+
+Before importing buildings, zombies, weapons, foliage assets or other systems from War Machine, Ben Final must prove that **finite-world camera-centred terrain streaming remains smooth under gradually heavier disposable test content**. The existing F1 static 1–100×1–100 grid is **not streaming** and remains available for comparison; no new streamer or test entities have been implemented by this documentation pass.
+
+The intended order is **BW-W4.0** frame-time observability and repeatable traversal → **BW-W4.1** active terrain loading/unloading with bounded memory and collision readiness → **BW-W4.2** appropriate distant terrain/LOD without visible cracks → **BW-W4.3** disposable procedural trees/grass/ferns (MultiMesh batches) → **BW-W4.4** disposable props and moving dummy entities → **BW-W4.5** five-minute cold/warm performance gate and test-content cleanup. The final island architecture must retain generic residency managers and remove temporary test art, not ship placeholder creatures or vegetation as gameplay features.
+
+The goal is a smooth target of 60 FPS without repeatable streaming-induced stalls, measured using **p95/p99/worst frame deltas, load latency, resident counts and peak memory**, not an unverified FPS claim. Default budgets/acceptance and source reference details: [BW-W4 programme](WORLD_IMPLEMENTATION_PLAN.md#bw-w4-programme--prove-streaming-under-disposable-content-before-gameplay-imports).
