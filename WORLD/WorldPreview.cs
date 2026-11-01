@@ -17,6 +17,16 @@ public partial class WorldPreview : Node3D
     public int CurrentChunkRadius => _parameters.ChunkRadius;
     public int CurrentChunksPerSide => _parameters.ChunksPerSide;
     public int CurrentMeshStep => _parameters.MeshStep;
+    // Read by the debug recorder at low frequency, including while the generator is asleep.
+    public string PreviousFrameWork => _previousFrameWork;
+    public string BenchmarkWorkSummary =>
+        $"Terrain {_attached}/{_total}, queued {_completed.Count}/{MaxQueuedResults}, " +
+        $"collision pending {_pendingCollisions.Count}, clearing {_pendingRemoval.Count} | " +
+        $"CPU {_cpuTotalMs:F1} ms (max {_cpuMaxMs:F1}), " +
+        $"mesh {_meshTotalMs:F1} ms (max {_meshMaxMs:F1}), " +
+        $"collision {_collisionTotalMs:F1} ms (max {_collisionMaxMs:F1}), " +
+        $"removal {_removalTotalMs:F1} ms (max {_removalMaxMs:F1}); " +
+        $"terrain spikes {_frameSpikes}";
 
     private const int MaxQueuedResults = 6;
     private const int MaxRemovalPerFrame = 12;
@@ -35,6 +45,7 @@ public partial class WorldPreview : Node3D
     private int _spikesAfterMesh, _spikesAfterCollision, _spikesOther, _postLoadFrames;
     private double _cpuTotalMs, _cpuMaxMs, _meshTotalMs, _meshMaxMs;
     private double _collisionTotalMs, _collisionMaxMs, _maxObservedFrameMs;
+    private double _removalTotalMs, _removalMaxMs;
     // The previous frame's operation is diagnostic correlation, not proof of causation.
     private string _previousFrameWork = "startup/idle";
 
@@ -82,6 +93,7 @@ public partial class WorldPreview : Node3D
         _spikesAfterMesh = _spikesAfterCollision = _spikesOther = _postLoadFrames = 0;
         _cpuTotalMs = _cpuMaxMs = _meshTotalMs = _meshMaxMs = 0;
         _collisionTotalMs = _collisionMaxMs = _maxObservedFrameMs = 0;
+        _removalTotalMs = _removalMaxMs = 0;
         _previousFrameWork = "startup/idle";
 
         // A second F1 click during cleanup must not queue the same nodes twice.
@@ -153,10 +165,24 @@ public partial class WorldPreview : Node3D
         if (_awaitingRegeneration)
         {
             // Limit destruction work while switching between large presets.
+            int removed = 0;
+            var removalWatch = Stopwatch.StartNew();
             for (int i = 0; i < MaxRemovalPerFrame && _pendingRemoval.Count > 0; i++)
             {
                 Node node = _pendingRemoval.Dequeue();
-                if (GodotObject.IsInstanceValid(node) && !node.IsQueuedForDeletion()) node.QueueFree();
+                if (GodotObject.IsInstanceValid(node) && !node.IsQueuedForDeletion())
+                {
+                    node.QueueFree();
+                    removed++;
+                }
+            }
+            if (removed > 0)
+            {
+                removalWatch.Stop();
+                double elapsedMs = removalWatch.Elapsed.TotalMilliseconds;
+                _removalTotalMs += elapsedMs;
+                _removalMaxMs = Math.Max(_removalMaxMs, elapsedMs);
+                _previousFrameWork = "removal";
             }
 
             if (_pendingRemoval.Count == 0)
@@ -319,6 +345,7 @@ public partial class WorldPreview : Node3D
             $"CPU meshing: {_cpuTotalMs:F1} ms (max chunk {_cpuMaxMs:F1})\n" +
             $"Mesh setup: {_meshTotalMs:F1} ms (max chunk {_meshMaxMs:F1})\n" +
             $"Collision cook: {_collisionTotalMs:F1} ms (max chunk {_collisionMaxMs:F1})\n" +
+            $"Removal: {_removalTotalMs:F1} ms (max {_removalMaxMs:F1})\n" +
             $"Max observed frame delta: {_maxObservedFrameMs:F1} ms | " +
             $">={_parameters.FrameSpikeThresholdMs:F1} ms spikes: {_frameSpikes}\n" +
             $"Spike correlations: prior mesh {_spikesAfterMesh}, collider {_spikesAfterCollision}, " +

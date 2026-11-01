@@ -36,6 +36,8 @@ The composed meadow/foothills/mountains test still instances **one low-poly 14 m
 
 Build C# in Godot 4.7.2 .NET, open `SCENE/Scene_World.tscn` and press **F6**. Press **F1** for the editor panel, enter a chunks-per-side number (e.g. 9 → 9×9, 50 → 50×50, or 100 → 100×100 after a large-world confirmation), adjust seed / seven geography sliders / mesh detail and click **Regenerate world**. Press F1 again to fly. Mouse looks around (inverted vertical by default); WASD/arrow keys fly, Q/E lower/raise, Shift moves faster (now 180 m/s), Escape releases the cursor and left click recaptures it.
 
+BW-W4.0 adds a small always-on frame-time HUD and an **F1 benchmark section**: start a manual capture, or choose a fixed 60/180 m/s camera route (optional instant reposition) and start automated capture; reopen F1 to stop or inspect P95/P99/worst frame-time and GC/terrain stage metrics. The camera restores manual control after the route. Use the same world seed, viewport and mesh-step across comparison runs. This is measurement of **static** terrain; no camera-following chunk streaming exists yet. Source awaits Godot build/runtime validation.
+
 The test's generation/performance settings are in `WORLD/Configuration/WorldMaster.tres`. Change `MeshStep` from 1 to 2 to compare triangle counts at the same physical world size, or adjust `CollisionChunkRadius` (default 0, centre only). Detailed methodology is in [WORLD/README.md](../WORLD/README.md). All terrain code belongs to `WORLD/`; `PLAYER/` is not required for the world test.
 
 Use F6 for either independent test scene. To run either with F5, choose it in **Project Settings → Application → Run → Main Scene**. Keep the existing `project.godot` untouched otherwise.

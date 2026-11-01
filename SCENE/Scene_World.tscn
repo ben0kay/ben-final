@@ -66,7 +66,7 @@ offset_top = 15.0
 offset_right = 1050.0
 offset_bottom = 63.0
 mouse_filter = 2
-text = "WORLD TEST | F1: world settings + regenerate   WASD/ARROWS: fly   Q/E: height   SHIFT: faster\nMOUSE: look (inverted Y)   ESC: release   LEFT CLICK: recapture"
+text = "WORLD TEST | F1: settings / benchmarks   WASD/ARROWS: fly   Q/E: height   SHIFT: faster\nMOUSE: look (inverted Y)   ESC: release   LEFT CLICK: recapture"
 
 [node name="Statistics" type="Label" parent="DebugUIRoot"]
 offset_left = 15.0
@@ -75,6 +75,14 @@ offset_right = 600.0
 offset_bottom = 305.0
 mouse_filter = 2
 text = "Preparing terrain..."
+
+[node name="BenchmarkHud" type="Label" parent="DebugUIRoot"]
+offset_left = 15.0
+offset_top = 315.0
+offset_right = 1100.0
+offset_bottom = 350.0
+mouse_filter = 2
+text = "FPS / frame delta / P99 benchmark preparing..."
 
 [node name="WorldSettingsPanel" type="PanelContainer" parent="DebugUIRoot"]
 visible = false
@@ -227,6 +235,39 @@ text = "Regenerate world"
 [node name="ResetButton" type="Button" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2
 text = "Reset sliders to saved defaults"
+
+[node name="BenchmarkHeading" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "BW-W4.0 — FRAME-TIME BENCHMARK (static terrain)"
+
+[node name="BenchmarkSpeedLabel" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Repeatable fly route speed"
+
+[node name="BenchmarkSpeed" type="OptionButton" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+
+[node name="BenchmarkTeleport" type="CheckBox" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Include instant reposition and return"
+button_pressed = true
+
+[node name="BenchmarkStartButton" type="Button" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Start manual frame capture (close F1 to fly)"
+
+[node name="BenchmarkRouteButton" type="Button" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Start fixed flight route + capture"
+
+[node name="BenchmarkStopButton" type="Button" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+text = "Stop capture / route"
+
+[node name="BenchmarkDetails" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
+layout_mode = 2
+autowrap_mode = 3
+text = "Start a capture to see frame-time percentiles, spikes, GC and terrain timings."
 
 [node name="PanelHint" type="Label" parent="DebugUIRoot/WorldSettingsPanel/PanelScroll/SettingsContent"]
 layout_mode = 2

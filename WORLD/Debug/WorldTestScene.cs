@@ -1,6 +1,7 @@
 // Standalone F1 world-test panel: numeric chunk counts and reusable terrain parameters.
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Godot;
 
 public partial class WorldTestScene : Node3D
@@ -18,6 +19,19 @@ public partial class WorldTestScene : Node3D
     private Label _sizeWarning = null!;
     private OptionButton _detail = null!;
     private Button _regenerate = null!, _reset = null!;
+    private WorldFlyCamera _flyCamera = null!;
+    private Label _benchmarkHud = null!, _benchmarkDetails = null!;
+    private OptionButton _benchmarkSpeed = null!;
+    private CheckBox _benchmarkTeleport = null!;
+    private Button _benchmarkStart = null!, _benchmarkRoute = null!, _benchmarkStop = null!;
+    private readonly FrameTimeRecorder _frames = new();
+    private readonly List<string> _spikeExamples = new(8);
+    private readonly Stopwatch _captureClock = new();
+    private string _captureName = "No capture yet";
+    private double _displayRefresh, _lastFrameMs;
+    private double _spikeThreshold = 33.3;
+    private long _peakManagedBytes;
+    private int _initialGc0, _initialGc1, _initialGc2;
 
     private readonly Dictionary<string, HSlider> _sliders = new();
     private readonly Dictionary<string, Label> _labels = new();
@@ -33,6 +47,18 @@ public partial class WorldTestScene : Node3D
         _world = GetNode<WorldPreview>("World");
         _scaleTree = GetNodeOrNull<WorldScaleTree>("WorldActorsRoot/DebugPropsRoot/ScalePine_14m");
         _statistics = GetNode<Label>("DebugUIRoot/Statistics");
+        _flyCamera = GetNode<WorldFlyCamera>("DebugRoot/DebugCamera");
+        _benchmarkHud = GetNode<Label>("DebugUIRoot/BenchmarkHud");
+        _benchmarkDetails = GetNode<Label>(ControlsPath + "/BenchmarkDetails");
+        _benchmarkSpeed = GetNode<OptionButton>(ControlsPath + "/BenchmarkSpeed");
+        _benchmarkTeleport = GetNode<CheckBox>(ControlsPath + "/BenchmarkTeleport");
+        _benchmarkStart = GetNode<Button>(ControlsPath + "/BenchmarkStartButton");
+        _benchmarkRoute = GetNode<Button>(ControlsPath + "/BenchmarkRouteButton");
+        _benchmarkStop = GetNode<Button>(ControlsPath + "/BenchmarkStopButton");
+        _benchmarkSpeed.AddItem("Normal flight (60 m/s)", 60);
+        _benchmarkSpeed.AddItem("Fast flight (180 m/s)", 180);
+        _benchmarkSpeed.Select(0);
+        _spikeThreshold = _world.Settings.Snapshot().FrameSpikeThresholdMs;
         _settingsPanel = GetNode<PanelContainer>("DebugUIRoot/WorldSettingsPanel");
         _chunkCount = GetNode<LineEdit>(ControlsPath + "/ChunkCount");
         _sizeWarning = GetNode<Label>(ControlsPath + "/SizeWarning");
@@ -60,7 +86,12 @@ public partial class WorldTestScene : Node3D
         _regenerate.Pressed += OnRegeneratePressed;
         _reset.Pressed += ResetControlsToWorldDefaults;
         _world.StatisticsChanged += UpdateStatistics;
+        _benchmarkStart.Pressed += OnStartManualCapture;
+        _benchmarkRoute.Pressed += OnStartRoute;
+        _benchmarkStop.Pressed += OnStopCapture;
+        _flyCamera.BenchmarkRouteFinished += OnRouteFinished;
         UpdateStatistics(_world.StatusText);
+        RefreshBenchmarkDisplay();
     }
 
     // =========================================================
@@ -195,6 +226,123 @@ public partial class WorldTestScene : Node3D
         _labels["Coverage"].Text = $"Mountain coverage: {_sliders["Coverage"].Value:F0}%";
     }
 
+    #region Benchmark instrumentation (BW-W4.0)
+
+    // =========================================================
+    // The world generator stops processing after loading. This light, constant-work
+    // sampler remains active so a capture can include traversal and idle frames.
+    public override void _Process(double delta)
+    {
+        if (!GetWindow().HasFocus()) return;
+        _lastFrameMs = delta * 1000.0;
+        if (_frames.IsRecording)
+        {
+            _frames.Sample(_lastFrameMs, _spikeThreshold);
+            // Only allocate for the first few slow frames; no per-frame log spam.
+            if (_lastFrameMs >= _spikeThreshold && _spikeExamples.Count < 8)
+                _spikeExamples.Add($"frame {_frames.FrameCount}: {_lastFrameMs:F1} ms, prior terrain {_world.PreviousFrameWork}");
+        }
+        _displayRefresh += delta;
+        if (_displayRefresh < 0.5) return;
+        _displayRefresh = 0;
+        RefreshBenchmarkDisplay();
+    }
+
+    // =========================================================
+    private void OnStartManualCapture()
+    {
+        _flyCamera.StopBenchmarkRoute();
+        StartCapture("Manual flight");
+    }
+
+    // =========================================================
+    private void OnStartRoute()
+    {
+        int speed = _benchmarkSpeed.GetSelectedId() == 180 ? 180 : 60;
+        bool teleport = _benchmarkTeleport.ButtonPressed;
+        StartCapture(teleport ? $"Route {speed} m/s + jump" : $"Route {speed} m/s");
+        float width = _world.CurrentChunksPerSide * _world.Settings.Snapshot().ChunkWidth;
+        _flyCamera.StartBenchmarkRoute(width, speed, teleport);
+    }
+
+    // =========================================================
+    private void StartCapture(string name)
+    {
+        _flyCamera.StopBenchmarkRoute();
+        _captureName = name;
+        _frames.Start();
+        _spikeExamples.Clear();
+        _captureClock.Restart();
+        _peakManagedBytes = GC.GetTotalMemory(false);
+        _initialGc0 = GC.CollectionCount(0);
+        _initialGc1 = GC.CollectionCount(1);
+        _initialGc2 = GC.CollectionCount(2);
+        // Closing F1 means manual flight and the scripted route have comparable UI load.
+        _settingsPanel.Visible = false;
+        Input.MouseMode = Input.MouseModeEnum.Captured;
+        _displayRefresh = 0.5;
+        RefreshBenchmarkDisplay();
+        GD.Print($"[BW-W4.0] Started {_captureName}; world {_world.CurrentChunksPerSide}x{_world.CurrentChunksPerSide}, step {_world.CurrentMeshStep}.");
+    }
+
+    // =========================================================
+    private void OnStopCapture()
+    {
+        _flyCamera.StopBenchmarkRoute();
+        FinishCapture("Stopped");
+    }
+
+    // =========================================================
+    private void OnRouteFinished() => FinishCapture("Route complete");
+
+    // =========================================================
+    private void FinishCapture(string reason)
+    {
+        if (!_frames.IsRecording) return;
+        _frames.Stop();
+        _captureClock.Stop();
+        _peakManagedBytes = Math.Max(_peakManagedBytes, GC.GetTotalMemory(false));
+        _captureName += $" — {reason}";
+        RefreshBenchmarkDisplay();
+        GD.Print("[BW-W4.0] " + _benchmarkDetails.Text.Replace("\n", " | "));
+    }
+
+    // =========================================================
+    // Refresh at 2 Hz; never compute percentiles or query renderer/GC every frame.
+    private void RefreshBenchmarkDisplay()
+    {
+        FrameTimeSnapshot s = _frames.Snapshot();
+        long primitives = (long)Godot.Performance.GetMonitor(
+            Godot.Performance.Monitor.RenderTotalPrimitivesInFrame);
+        if (_frames.IsRecording)
+            _peakManagedBytes = Math.Max(_peakManagedBytes, GC.GetTotalMemory(false));
+        string mode = _frames.IsRecording ? "REC" : s.Frames > 0 ? "CAPTURED" : "IDLE";
+        _benchmarkHud.Text =
+            $"FPS {Engine.GetFramesPerSecond():F0} | frame delta {_lastFrameMs:F1} ms | " +
+            $"P99 {(s.Frames > 0 ? $"{s.P99Ms:F1} ms" : "--")} | " +
+            $"{mode} | rendered prims {primitives:N0}";
+
+        if (s.Frames == 0)
+        {
+            _benchmarkDetails.Text = "No benchmark samples. Start a manual capture or scripted route.\n" +
+                "Frame deltas are measured in the foreground; this is still a STATIC world.";
+            return;
+        }
+
+        _benchmarkDetails.Text =
+            $"{_captureName} | {mode} | {_captureClock.Elapsed.TotalSeconds:F1} s / {s.Frames:N0} frames\n" +
+            $"Frame delta: avg {s.AverageMs:F1} | median {s.MedianMs:F1} | " +
+            $"P95 {s.P95Ms:F1} | P99 {s.P99Ms:F1} | worst {s.WorstMs:F1} ms\n" +
+            $">= {_spikeThreshold:F1} ms: {s.Spikes:N0} frames | previous terrain work: {_world.PreviousFrameWork}\n" +
+            $"Managed heap peak sampled: {_peakManagedBytes / 1048576d:F1} MiB (not RAM/VRAM) | " +
+            $"GC 0/1/2: {GC.CollectionCount(0) - _initialGc0}/" +
+            $"{GC.CollectionCount(1) - _initialGc1}/{GC.CollectionCount(2) - _initialGc2}\n" +
+            _world.BenchmarkWorkSummary +
+            (_spikeExamples.Count > 0 ? "\nFirst slow frames (correlation only):\n" +
+                string.Join("\n", _spikeExamples) : "");
+    }
+    #endregion
+
     // =========================================================
     private void UpdateStatistics(string message) => _statistics.Text = message;
 
@@ -202,6 +350,14 @@ public partial class WorldTestScene : Node3D
     public override void _ExitTree()
     {
         if (GodotObject.IsInstanceValid(_world)) _world.StatisticsChanged -= UpdateStatistics;
+        if (GodotObject.IsInstanceValid(_flyCamera))
+        {
+            _flyCamera.BenchmarkRouteFinished -= OnRouteFinished;
+            _flyCamera.StopBenchmarkRoute();
+        }
+        if (GodotObject.IsInstanceValid(_benchmarkStart)) _benchmarkStart.Pressed -= OnStartManualCapture;
+        if (GodotObject.IsInstanceValid(_benchmarkRoute)) _benchmarkRoute.Pressed -= OnStartRoute;
+        if (GodotObject.IsInstanceValid(_benchmarkStop)) _benchmarkStop.Pressed -= OnStopCapture;
         if (GodotObject.IsInstanceValid(_chunkCount)) _chunkCount.TextChanged -= OnChunkCountChanged;
         if (GodotObject.IsInstanceValid(_largeWorldConfirmation))
             _largeWorldConfirmation.Confirmed -= OnLargeWorldConfirmed;
