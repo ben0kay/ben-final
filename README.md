@@ -2,7 +2,7 @@
 
 **Repository:** ben0kay/ben-final  
 **Engine:** Godot 4 .NET / C# (existing Ben Final project.godot preserved; C# support configured)  
-**Project direction:** **Finite island survival, exploration and crafting game**. The player is stranded on an island surrounded by water; the long-term goal is to scavenge, gather and craft the components required to assemble a working plane and escape by taking off. The island is **semi-authored / procedural**, with a repeatable seed and deliberate placement of important locations. This is the target design, **not implemented gameplay**.
+**Project direction:** **First-person, simulation-heavy survival sandbox on a finite island**. Inspired by Project Zomboid's depth of mechanics, sandbox customization and modding ecosystem—not its camera or visual style. The player scavenges, crafts and ultimately assembles/repairs a plane to escape. The island is **semi-authored / procedural** with a repeatable seed and carefully placed locations. The long-term mechanics below are **design goals, not implemented features**.
 
 **Technical status:** The owner has run a 27×27 (1,728 m) static terrain preview with 729 chunks. The terrain is currently an unbounded-in-shape rectangular test patch, **not yet an island**. An F1 panel requests 1–100 chunks per side, changes the seed and tunes seven geography sliders. **BW-W4.0 now includes an opt-in frame-time recorder and repeatable fly-camera benchmark route (source implemented; awaits Godot validation).** This is still a static test: **water, procedural forests, authored sites, crafting, the plane objective, real chunk streaming, mixed-distance LOD and caves are not implemented.**
 
@@ -17,7 +17,7 @@ The intended experience combines open-ended island exploration with a clear long
 - **Craft and assemble:** Progress from basic survival and utility crafting to specialist components needed for the plane. The exact recipes, plane type, inventory and assembly mechanics are **to be designed**, not predetermined here.
 - **Prepare for escape:** Locate or prepare a suitable take-off area, complete the aircraft, obtain whatever it needs to operate, and make a successful take-off the main end goal.
 
-The world is **semi-authored / procedural**, not wholly random each playthrough. Use procedural systems to create natural variation and reduce repetitive placement work, while authoring the terrain composition, essential locations and progression deliberately. Survival pressure, weather, wildlife, AI encounters, caves, basements and more advanced simulation are possible later additions, **not assumed features**.
+The world is **semi-authored / procedural**, not wholly random each playthrough. Use procedural systems to create natural variation and reduce repetitive placement work, while authoring terrain composition, essential locations and progression deliberately. **Deep survival simulation, zombies, moodles, vehicles, crafting, cooking, sleep and other interconnected systems are explicit long-term ambitions**, developed incrementally rather than assumed to exist now. The player should have extensive control over their sandbox rules.
 
 The project continues to use a **custom Godot 4 C# terrain foundation** (marching cubes currently), with streaming, level of detail and background generation as engineering goals. World technology exists to support the island game, not as an end in itself. Existing War Machine and Final Machine systems are reference material and should only be adopted selectively.
 
@@ -58,6 +58,52 @@ The testing programme is intentionally cumulative:
 **Performance gate:** target 60 FPS on the intended baseline PC and **no noticeable streaming-induced stalls in ordinary traversal**. Track p99 and worst frames, not only FPS. Proposed first acceptance thresholds and workloads belong in [WORLD/WORLD_IMPLEMENTATION_PLAN.md](WORLD/WORLD_IMPLEMENTATION_PLAN.md); these are **targets to validate, not accomplished results or guarantees**. If a pass hitches, isolate CPU generation, mesh upload, physics cooking, instancing, shader warm-up, GPU overdraw or garbage collection before adding another layer.
 
 **Architecture boundary:** coordinate terrain, vegetation, props and nearby actor activation through **one world-level residency policy** but let each category retain its own resource lifecycle and performance budget. Never make every temporary test object a separate always-running manager. Test fixtures should live under dedicated debug/test ownership (e.g. `DEBUG/WorldStreaming/`), not become dependencies of final gameplay scenes. Only after this gate passes should selected War Machine systems be transferred one by one.
+
+## Long-term gameplay inspiration — Project Zomboid depth, in first person
+
+**Design north star:** Aim for the breadth, customizability and emergent survival interactions associated with **Project Zomboid**, while keeping Ben Final an original **first-person**, finite-island game with its own plane-escape objective. Favour **simulation depth, player agency, good performance and moddability over visual realism**. A simple low-poly presentation is a deliberate foundation, not a limitation on the eventual quality of the game.
+
+### Deep interconnected survival systems (ALL PLANNED)
+
+| System | Intended direction |
+| --- | --- |
+| **Player needs and moodles** | Hunger, thirst, fatigue, sleep, temperature, health/injuries, stamina, stress and other meaningful status effects. Provide readable moodles that explain conditions and consequences; exact stats and balancing come later. |
+| **Scavenging, crafting and cooking** | Material gathering, tools, recipes, food preparation, preservation, crafting stations, item condition, repairs and long-term resource planning. |
+| **Vehicles and maintenance** | Driveable vehicles with parts, fuel/energy, damage, repairs and noise. Vehicle quality and mechanical depth should be expandable without rewriting movement or inventory foundations. |
+| **Zombies and population simulation** | Deterministic seeded zombie-density maps/noise combined with authored town/road/POI density zones, groups or hordes, and optional leader variants that influence nearby zombies. Spawning, respawning and migration policies remain configurable design choices. |
+| **World interactions** | Enterable structures, loot containers, doors, barricades, building repairs/construction, sound propagation and environment-driven consequences, added in independently testable increments. |
+| **Simulation and long-term progression** | Weather, time of day, sleep cycles, persistent loot/world changes and eventually other survival layers. The plane components and take-off remain the main completion objective; the sandbox should still be interesting when the player delays it. |
+
+**Interconnection matters more than feature count.** A loud vehicle or gunshot can affect zombie investigation; poor sleep can affect performance; injuries can affect movement; hunger can influence stamina; weather can change visibility and survival needs. Specify shared signals/events and data contracts rather than tightly coupling every subsystem to every other subsystem. These examples are *design intentions*, not promises of specific mechanics already working.
+
+### Extensive sandbox customization (PLANNED)
+
+The eventual game should expose **many granular options**, not just Easy/Normal/Hard. Candidate categories include:
+
+- **Zombie populations:** globally scaled density, deterministic density/noise seed, town/road/wilderness density multipliers, initial population, spawn/respawn rules and cooldowns, migration, groups/hordes, leaders and special variants, hearing/sight sensitivity, noise attraction and speed/strength distributions.
+- **Survival and world rules:** hunger/thirst/sleep rates, moodle severity, injury and recovery rules, weather and seasons (if implemented), loot/food abundance and spoilage, crafting times, vehicle condition/fuel, day length and optional gameplay assists.
+- **World and progression:** locked authored island layout/seed, independent population and loot random seeds where useful, difficulty presets with per-option overrides, and optional escape-progression tuning without allowing procedural randomness to make essential plane components unobtainable.
+
+**Configuration contract:** Prefer grouped, typed, validated settings resources with defaults and sensible ranges. Keep **global world generation seed**, **zombie population seed**, **spawn/respawn policy**, and **mutable world save state** separate. Save chosen sandbox settings with the playthrough. Avoid burying gameplay balance constants in per-entity code; add UI controls when their systems exist, not hundreds of empty options upfront. When adding new settings or mods, provide schema/version migration and safe fallbacks for older saves.
+
+### Mod-friendly, content-driven architecture (PLANNED)
+
+Eventually support a rich mod ecosystem that can extend **items, recipes, loot tables, moodles/status effects, zombie traits and variants, spawn maps, structures, vehicles, visual assets and gameplay rules**. Start with reusable data schemas and registries before deciding the eventual user-facing mod packaging, scripting hooks or workshop/distribution model.
+
+- Keep stable identifiers for content, entity instances and saved states. Allow content to be added or replaced without requiring hard-coded edits across unrelated gameplay code.
+- Use declarative data, component-style behaviours and explicit, versioned interfaces where practical; don't assume arbitrary mod scripts should have unrestricted access to engine internals.
+- Separate **world population descriptions** from **live simulated actors**. A town can have a stored population distribution without instantiating hundreds of nearby-or-distant `CharacterBody3D` nodes. Stream and simulate in detail only what is relevant, while preserving persistent changes.
+- Make optional gameplay systems easy to enable/disable through validated sandbox settings and mods without invalidating the core island, crafting or escape experience.
+
+### Low-poly now, replaceable visuals later (CORE RULE)
+
+**Gameplay systems must never depend on a particular mesh, material, shader, visual polycount or temporary model generator.** Begin with cheap, simple, stylized/low-poly assets to prove behaviour and performance. Higher-quality art, animations, effects and audio can be introduced progressively, **without rewriting the underlying gameplay logic**.
+
+For example, a zombie's identity, health, senses, movement state, attacks, leader/group behaviour and save data belong to gameplay components; its **visual scene** is replaceable. Use reusable prefab interfaces, animation/skeleton conventions, attachment sockets, colliders and LOD contracts so an upgraded model can be swapped in deliberately. The same separation applies to vehicles, trees, buildings, foliage and interactive props. Upgraded visuals still require rendering/performance validation; they are not automatically cost-free.
+
+### Sequencing rule
+
+**Do not rush these systems into Ben Final now.** First validate **BW-W4.0**, build and test real **BW-W4.1 terrain streaming**, then disposable tree/grass/prop/dummy-entity stress tests and later LOD. Only after the streaming performance gate is accepted should War Machine components be reviewed **one system at a time**. The deep survival/sandbox/modding vision guides API boundaries and data ownership today; it does **not** authorize speculative gameplay rewrites, premature mod loaders or new permanent models.
 
 ## Core development approach: independent scenes
 
@@ -126,8 +172,10 @@ ben-final/
 │   ├── Regions/                 [planned: authored biome/site zones]
 │   └── Vegetation/              [planned: zone-based scatter]
 ├── Buildings/                  [planned: authored sites/prefabs]
-├── Gameplay/                   [planned: gather/craft/plane escape]
-├── AI/                         [planned]
+├── Gameplay/                   [planned: survival, moodles, crafting, sandbox rules, escape]
+├── AI/                         [planned: zombie population and agent behaviour]
+├── Vehicles/                   [planned]
+├── Modding/                    [planned: data contracts, future optional mod loader]
 ├── ASSETS/                     [created]
 │   └── README.md                [created]
 ├── Configuration/
@@ -224,6 +272,12 @@ The terrain vision is **a coherent finite island**: varied coastline and ocean, 
 | **BW-I1** | First integration | Instance World and Player together; spawn on terrain and navigate with collision | **Planned** |
 | **BW-G1** | Gather and craft | Scavenging, resources, item components, recipe/progression scaffolding and inventory integration | **Planned** |
 | **BW-G2** | Plane escape objective | Required aircraft components, assembly/repair, readiness checks, usable take-off area and escape outcome | **Planned** |
+| **BW-S1** | Survival and moodles | Player needs, sleep, fatigue, injuries/health and status-effect UI; cross-system event contracts | **Planned — after streaming gate** |
+| **BW-Z1** | Seeded zombie population | Density/noise maps, authored high-population areas, zombie spawn/respawn/migration rules and leader/group possibilities; separate far population from active AI | **Planned — after streaming gate** |
+| **BW-V1** | Vehicles and upkeep | Vehicle handling, condition, parts, repair and sound/relevance integration | **Planned — later** |
+| **BW-C1** | Deeper crafting and cooking | Item/recipe data, cooking, processing, tool/part quality, condition and progression extensions | **Planned — later** |
+| **BW-SB1** | Rich sandbox configuration | Typed rules for zombie populations, survival rates, loot, vehicles, weather and difficulty presets | **Planned — incremental** |
+| **BW-M1** | Modding foundation | Versioned content IDs, data-driven registries, safe extension boundaries and backward-compatible save definitions | **Planned — incremental** |
 | **BW-P1** | Long-range persistence/performance | Save/load edits and actors; larger traversal tests; profiling toward world-scale targets | **Planned** |
 
 ### Recommended next implementation sequence
@@ -241,9 +295,12 @@ The original **96×96 m** pre-optimization screenshot recorded **21,308 triangle
 - **WORLD owns the finite island**: deterministic land/coast generation, ocean/world boundary, mesh/collision residency, region definitions and world queries such as surface height, solid/empty samples and safe spawn positions. Follow [WORLD/WORLD_AUTHORING.md](WORLD/WORLD_AUTHORING.md) for design/implementation guidance.
 - **PLAYER owns FPS behavior**: movement, camera, input, equipment and interactions. It should consume world information via explicit contracts, not by knowing the test level hierarchy. Follow [PLAYER/README.md](PLAYER/README.md).
 - **Buildings own their geometry**: authored/procedural structures, interiors, colliders and interactable objects. Stable island-site placement records/footprints are separate from reusable prefab definitions; World integration resolves site terrain clearance or excavation.
-- **AI owns its behavior**: perception, navigation and actions; level geometry and spawn handling come from its host scene.
+- **AI owns its behavior**: perception, navigation and actions; level geometry and spawn handling come from its host scene. The **zombie population map** (seeded distribution, density rules, migrations and persistent state) is separate from currently instantiated NPC actors.
 - **MainGame composes subsystems**: instances the scenes and connects interfaces/signals. Avoid direct hard-coded cross-feature node paths.
-- **Gameplay owns progression**: loot/gather/craft interactions, availability of required aircraft components, assembly state and successful escape/take-off checks. The world provides locations and resources but should not hide critical progress behind unbounded randomness.
+- **Gameplay owns progression**: loot/gather/craft interactions, cooking and other survival needs, availability of required aircraft components, assembly state and successful escape/take-off checks. The world provides locations and resources but should not hide critical progress behind unbounded randomness.
+- **Simulation/settings own shared rules**: typed sandbox options, needs/status effects, population seeds and global event contracts should be modular and save-compatible; optional features must not create unnecessary per-frame processing.
+- **Visuals are adapters, not mechanics**: gameplay entities reference replaceable meshes/animation/audio via prefabs, interfaces and stable sockets; begin with low-poly graphics and upgrade progressively without replacing identity, inventory, AI, health or physics contracts.
+- **Modding remains an architectural goal**: make schemas and stable IDs extensible early, but do not build a plugin/mod execution system before a real gameplay feature needs it.
 - **Saving** stores the locked world seed and generator version, region/site authoring overrides, terrain modifications, actors/objects, harvested resources and plane progress separately. Distinguish deterministic content from mutable state.
 
 ## Performance and validation principles
