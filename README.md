@@ -105,6 +105,16 @@ For example, a zombie's identity, health, senses, movement state, attacks, leade
 
 **Do not rush these systems into Ben Final now.** First validate **BW-W4.0**, build and test real **BW-W4.1 terrain streaming**, then disposable tree/grass/prop/dummy-entity stress tests and later LOD. Only after the streaming performance gate is accepted should War Machine components be reviewed **one system at a time**. The deep survival/sandbox/modding vision guides API boundaries and data ownership today; it does **not** authorize speculative gameplay rewrites, premature mod loaders or new permanent models.
 
+## Map-first island concept experiment (IMPLEMENTED IN SOURCE; AWAITING GODOT TEST)
+
+A new **independent 2D cartography preview** lives in [MAP_CONCEPT/Scene_MapConcept.tscn](MAP_CONCEPT/Scene_MapConcept.tscn). Open it in Godot and press **F6**; it is entirely separate from `SCENE/Scene_World.tscn` and does not modify the current marching-cubes generator, benchmark, player or gameplay.
+
+It presents a fictional **Greywake Islands v1** hand-authored island outline with offshore islets, forest/highland/meadow/wetland polygons, rivers, roads and named candidate settlements/landmarks (including a broken airstrip). Stylized vector mountains, illustrated trees, coastal strokes, sea markings, labels, compass and scale reference are rendered from those definitions. Zoom with the **mouse wheel**, pan with **left/middle/right drag**, press **R** to recenter, **L** to toggle labels, or use the on-screen controls. A numeric scatter seed changes tree/terrain **decoration only**; the coastline and authored sites do not randomly jump around.
+
+**Future 3D workflow:** Iterate with AI on the authoring coordinates and region names in `MAP_CONCEPT/MapConceptLayout.cs`, inspect the revised scene, then use **Export map blueprint JSON** (to Godot's `user://map_concept_layout.json`) to preserve the chosen coastline, region polygons, river/road paths, site IDs and map-unit scale hint. The blueprint is **not** a true heightmap, detailed navigable terrain, an editor paint tool, or a 3D generator. When the owner approves the layout, a **separately authorized** 2D-to-3D integration can use its data to constrain land elevation, coastlines, waterways, biome placement and site clearances. The initial coordinate scale is illustrative; the final island size remains a design decision. Full guide: [MAP_CONCEPT/README.md](MAP_CONCEPT/README.md).
+
+**Scope:** This is a concept-authoring side experiment. **BW-W4.1 streaming and disposable load tests remain the required performance gate before War Machine gameplay imports.** No streaming/terrain integration has been performed.
+
 ## Core development approach: independent scenes
 
 Build each subsystem in its own scene and test environment; bring them together later through **scene instancing and shared contracts**, not by merging unrelated source code or making one monolithic test scene.
@@ -113,6 +123,7 @@ Build each subsystem in its own scene and test environment; bring them together 
 | --- | --- | --- |
 | **SCENE/Scene_Player.tscn** | Arrow-key FPS, inverted mouse look, RMB jump and right-Ctrl crouch | Instances reusable PLAYER/Player.tscn; graybox with collision (awaiting validation) |
 | **SCENE/Scene_World.tscn** | Static world test with validated 1–100 NxN chunks, F1 seed + 7 geography sliders, regeneration and fly camera | Instances WORLD/World.tscn; no Player required; new panel/landforms await validation |
+| **MAP_CONCEPT/Scene_MapConcept.tscn** | Authored top-down island map for zoom/pan inspection, deterministic decorative scatter and JSON blueprint export | Independent C# Node2D scene; **implemented in source, awaits Godot validation** |
 | **SCENE/Scene_Buildings.tscn** | Buildings, interiors, doors, props, stairs, basements, collision | Building scenes and test ground |
 | **SCENE/Scene_AI.tscn** | Pathfinding, perception, investigation, combat and NPC simulation | AI actors, simple target/player stand-in, test geometry |
 | **SCENE/Scene_Game.tscn** | Eventually integrate the island, player, authored sites, gathering/crafting and escape objective | Only systems ready for integration; **planned** |
@@ -121,7 +132,7 @@ Each test scene should launch on its own. The World scene must not require a ful
 
 ## Planned project layout
 
-Three top-level ownership folders now exist: **[WORLD/](WORLD/README.md)**, **[PLAYER/](PLAYER/README.md)** and **[ASSETS/](ASSETS/README.md)**. The other paths below are **planned**, not claims of implemented scenes or scripts. Create feature folders/scenes as each milestone requires them; avoid empty placeholders.
+The project now has four independent work areas: **[WORLD/](WORLD/README.md)**, **[PLAYER/](PLAYER/README.md)**, **[ASSETS/](ASSETS/README.md)** and **[MAP_CONCEPT/](MAP_CONCEPT/README.md)**. Other paths below are **planned**, not claims of implemented scenes or scripts. Create feature folders/scenes as each milestone requires them; avoid empty placeholders.
 
 ~~~text
 ben-final/
@@ -136,6 +147,12 @@ ben-final/
 │   ├── Scene_Buildings.tscn    [planned]
 │   ├── Scene_AI.tscn           [planned]
 │   └── Scene_Game.tscn         [planned]
+├── MAP_CONCEPT/                 [created — independent island blueprint]
+│   ├── README.md               [created]
+│   ├── Scene_MapConcept.tscn   [created — F6 zoom/pan illustrated map]
+│   ├── MapConceptLayout.cs     [created — authored coast/regions/routes/sites]
+│   ├── MapConceptArt.cs        [created — illustrative drawing]
+│   └── MapConceptViewer.cs     [created — navigation and export]
 ├── PLAYER/                     [created]
 │   ├── README.md                [created]
 │   ├── Player.tscn              [created]
@@ -246,6 +263,7 @@ These are **ownership concepts**, not nodes that must be created on day one. Kee
 - **[WORLD/README.md](WORLD/README.md)** — WORLD ownership, FPS-independent test controls, mesh-step/collision settings and the BW-W1 performance comparison procedure.
 - **[PLAYER/README.md](PLAYER/README.md)** — standalone player/FPS architecture and test-scene isolation.
 - **[SCENE/README.md](SCENE/README.md)** — independent test-scene ownership, F6 and F1 regeneration controls.
+- **[MAP_CONCEPT/README.md](MAP_CONCEPT/README.md)** — independent authored island blueprint, map viewer navigation, deterministic decorative scatter and JSON export.
 - **[ASSETS/README.md](ASSETS/README.md)** — imported model, texture and audio organization; source versus reusable scene prefabs.
 
 The terrain vision is **a coherent finite island**: varied coastline and ocean, accessible lowlands, forest/grass/fern zones, hills and mountain silhouettes, with deliberate clearings and authored points of interest. Marching cubes creates surfaces; separate geography, biome, water, vegetation and site-authoring systems create the world. The existing world authoring file is a technical reference; the island vision and gameplay goal in this root README take precedence if older exploratory ambitions conflict.
@@ -259,6 +277,7 @@ The terrain vision is **a coherent finite island**: varied coastline and ocean, 
 | **BW-W2** | Adjacent chunk generation | Static centre-out NxN grid (1–100 chunks per side) with F1 validated world-size input and safe regeneration; seam checks pending | **Awaiting Validation** |
 | **BW-W3A** | Composed geography | Original pass owner-tested (too flat + wall of spikes). New broad rolling hill masses, mountain coverage mask and seven shaping sliders implemented | **Awaiting Validation** |
 | **BW-W3B** | True 3D caves and overhangs | Full volumetric density, vertical chunk ownership, cave entrances, editable terrain and basements | **Planned** |
+| **BW-MAP1** | Independent illustrated island blueprint | Zoomable/pannable F6 2D scene, authored coast/regions/routes/sites, seed-scattered decoration and JSON blueprint export; no 3D terrain coupling | **Implemented in source — awaiting Godot validation** |
 | **BW-W4.0** | Streaming measurement baseline | F1 manual capture and fixed 60/180 m/s fly routes, frame-time histogram (median/P95/P99/worst), GC and terrain timing breakdown | **Implemented in source — awaiting Godot validation** |
 | **BW-W4** | Streaming and LOD | Camera-centred terrain residency, bounded load/unload queues, collision readiness, distance LOD and transitions; current preview still retains all generated chunks | **Planned — next priority** |
 | **BW-W4T** | Disposable streaming stress tests | Temporary trees/grass/ferns, props and dummy actors; repeatable fast-travel tests, frame-time/memory instrumentation and cleanup **before War Machine imports** | **Planned — gated on BW-W4 foundations** |

@@ -1,0 +1,94 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://MAP_CONCEPT/MapConceptViewer.cs" id="1"]
+[ext_resource type="Script" path="res://MAP_CONCEPT/MapConceptArt.cs" id="2"]
+
+[node name="Scene_MapConcept" type="Node2D"]
+script = ExtResource("1")
+
+[node name="MapArtwork" type="Node2D" parent="."]
+script = ExtResource("2")
+
+[node name="MapCamera" type="Camera2D" parent="."]
+enabled = true
+zoom = Vector2(0.9, 0.9)
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="SidePanel" type="PanelContainer" parent="UI"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 348.0
+offset_bottom = 438.0
+mouse_filter = 0
+
+[node name="Contents" type="VBoxContainer" parent="UI/SidePanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Header" type="Label" parent="UI/SidePanel/Contents"]
+layout_mode = 2
+text = "BEN FINAL   /   MAP CONCEPT"
+theme_override_font_sizes/font_size = 21
+
+[node name="Subheading" type="Label" parent="UI/SidePanel/Contents"]
+layout_mode = 2
+text = "GREYWAKE ISLANDS  —  BLUEPRINT V1"
+theme_override_font_sizes/font_size = 14
+
+[node name="Description" type="Label" parent="UI/SidePanel/Contents"]
+layout_mode = 2
+autowrap_mode = 3
+text = "Independent 2D island concept. All major geography and site coordinates are authored; only small detail is scattered from a seed."
+
+[node name="Navigation" type="Label" parent="UI/SidePanel/Contents"]
+layout_mode = 2
+autowrap_mode = 3
+text = "WHEEL: zoom under cursor\nLEFT / MIDDLE DRAG: pan\nR: reset view    L: labels"
+theme_override_font_sizes/font_size = 13
+
+[node name="SeedLabel" type="Label" parent="UI/SidePanel/Contents"]
+layout_mode = 2
+text = "Decorative scatter seed"
+
+[node name="ScatterSeed" type="SpinBox" parent="UI/SidePanel/Contents"]
+layout_mode = 2
+min_value = 0.0
+max_value = 999999.0
+step = 1.0
+value = 147.0
+
+[node name="RebuildButton" type="Button" parent="UI/SidePanel/Contents"]
+layout_mode = 2
+text = "Rescatter illustrated trees + detail"
+
+[node name="ShowLabels" type="CheckBox" parent="UI/SidePanel/Contents"]
+layout_mode = 2
+button_pressed = true
+text = "Show region and site labels"
+
+[node name="ResetViewButton" type="Button" parent="UI/SidePanel/Contents"]
+layout_mode = 2
+text = "Reset map view"
+
+[node name="ExportButton" type="Button" parent="UI/SidePanel/Contents"]
+layout_mode = 2
+text = "Export map blueprint JSON"
+
+[node name="Status" type="Label" parent="UI/SidePanel/Contents"]
+layout_mode = 2
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 12
+text = "Preparing map concept..."
+
+[node name="BottomNote" type="Label" parent="UI"]
+offset_left = 19.0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -42.0
+offset_right = 1050.0
+offset_bottom = -14.0
+mouse_filter = 2
+text = "MAP CONCEPT ONLY   •   No terrain meshes or streaming   •   Locations / names are placeholders"
+theme_override_colors/font_color = Color(0.14, 0.29, 0.30, 1)
+theme_override_font_sizes/font_size = 14

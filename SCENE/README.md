@@ -2,6 +2,7 @@
 
 Test scenes instance reusable feature scenes; gameplay and generation code remain in their owning folders.
 
+- **[MAP_CONCEPT/Scene_MapConcept.tscn](../MAP_CONCEPT/Scene_MapConcept.tscn)** — separate 2D illustrated island concept, with panning, zoom, region/site labels and exported authoring data; **implemented in source, awaiting Godot validation**. This does not modify the 3D terrain scene.
 - **[Scene_Player.tscn](Scene_Player.tscn)** — graybox FPS room with an instanced `res://PLAYER/Player.tscn`; **awaiting local Godot validation**.
 - **[Scene_World.tscn](Scene_World.tscn)** — marching-cubes terrain preview; **27×27 static chunks spanning 1,728×1,728 m by default**, F1 validated text input for 1–100 chunks per side / seed / seven geography sliders / detail with regeneration, sky/sun and free-fly camera. Mesh resolution, chunk radius and collision range are in WORLD/Configuration/WorldMaster.tres; **larger preview awaiting local validation**.
 - `Scene_Buildings.tscn`, `Scene_AI.tscn`, `Scene_Game.tscn` — **planned**, not created.
@@ -41,3 +42,7 @@ BW-W4.0 adds a small always-on frame-time HUD and an **F1 benchmark section**: s
 The test's generation/performance settings are in `WORLD/Configuration/WorldMaster.tres`. Change `MeshStep` from 1 to 2 to compare triangle counts at the same physical world size, or adjust `CollisionChunkRadius` (default 0, centre only). Detailed methodology is in [WORLD/README.md](../WORLD/README.md). All terrain code belongs to `WORLD/`; `PLAYER/` is not required for the world test.
 
 Use F6 for either independent test scene. To run either with F5, choose it in **Project Settings → Application → Run → Main Scene**. Keep the existing `project.godot` untouched otherwise.
+
+## Running the Map Concept preview
+
+Open `res://MAP_CONCEPT/Scene_MapConcept.tscn` in Godot 4 .NET and press **F6**. Use **mouse wheel** to zoom around the cursor, **left/middle/right drag** to pan, **R** to reset and **L** to toggle labels. The side panel lets you reseed decorative tree/ground markings (not the authored coastline), restore the view and export the structured map blueprint to `user://map_concept_layout.json`. This test scene does **not** invoke the terrain generator, streaming, Player or War Machine content.

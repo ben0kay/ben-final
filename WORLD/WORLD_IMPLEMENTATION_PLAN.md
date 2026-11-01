@@ -8,6 +8,14 @@
 >
 > **Companion documents:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md) explains the intended geology/terrain techniques; [README.md](README.md) explains existing files and how to run them; [root README](../README.md) tracks the project's milestone statuses; [CodePreferences](../CodePreferences.md) and [AGENTS](../AGENTS.md) govern coding and Git practice.
 
+## Independent map-concept experiment — BW-MAP1 (SOURCE IMPLEMENTED; AWAITING GODOT TEST)
+
+The owner wants to **design the island from a top-down map first**, then translate approved land/region/route/site placement data into procedural 3D generation **later**. A separate `MAP_CONCEPT/` folder now contains `Scene_MapConcept.tscn` (F6 cartography viewer), `MapConceptLayout.cs` (authoring coordinates and stable IDs), `MapConceptArt.cs` (vector styling), `MapConceptViewer.cs` (zoom/pan/seed/export) and a dedicated README. It does not read or mutate `WORLD/`, import War Machine content, create 3D meshes, solve streaming or establish final elevation values.
+
+**Intent:** A deliberately authored main island, coastal islets, named forests/highlands/meadows/wetlands, rivers, roads, and stable candidate sites. The default layout is a placeholder **Greywake Islands v1**, not approved island canon. Its optional integer scatter seed varies decorative tree/ground samples **without moving authored feature geometry**. `Export map blueprint JSON` writes `user://map_concept_layout.json` with raw 2D boundaries, IDs, route coordinates and a provisional scale hint. A future mapping pass must approve height/sea-level layers, coastline shaping, 3D coordinate transforms and building ground clearance before treating it as runtime terrain input.
+
+**Do not conflate:** BW-MAP1 is an independent *visual authoring concept*, not BW-W4.1 terrain streaming. The previously established performance gate remains mandatory before actual War Machine gameplay transfers. **Godot build/F6 and visual acceptance are still pending.**
+
 ## 1. Target and priorities
 
 Develop a performant, visually convincing procedural landscape in Godot 4 C# **without Terrain3D or Voxel Tools**. Longer-term ambitions are broad natural regions, rolling meadows, connected mountains, forested valleys, coastlines and eventually caves, overhangs, basements and enterable buildings.
