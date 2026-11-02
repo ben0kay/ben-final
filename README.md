@@ -115,6 +115,8 @@ A separate illustrated map scene, [MAP_CONCEPT/Scene_MapConcept.tscn](MAP_CONCEP
 - **Scope:** The procedural map still generates **coastline only**. Seed-driven mountains, forests, lakes, rivers, cities/towns, roads and other POIs are later phases; true 3D terrain and gameplay are entirely separate.
 - **Export:** JSON schema **4** stores the generated coastline polygons, exact full-length seed, generation version and settings. See [MAP_CONCEPT/README.md](MAP_CONCEPT/README.md) for controls and limitations.
 
+**MAP2.0B modular cleanup (source refactor, awaiting C# verification):** `MAP_CONCEPT/Generation/` now owns the non-radial land field, contour tracing, offshore island placement and deterministic seed helpers; `MAP_CONCEPT/Rendering/` owns the natural and feature painters and illustration utilities. `MapConceptGenerator.cs` and `MapConceptArt.cs` retain their existing public interfaces and scene paths as thin coordinators. **No procedural formulas, draw order, seed sequences, generator version or JSON export format were intentionally changed.**
+
 The aim is a rich variety of coherent seeded landmasses **before** designing the interior geography.
 
 ## Core development approach: independent scenes
@@ -153,10 +155,12 @@ ben-final/
 │   ├── README.md               [created]
 │   ├── Scene_MapConcept.tscn   [created — F6 zoom/pan illustrated map]
 │   ├── MapConceptLayout.cs     [created — authored coast/regions/routes/sites]
-│   ├── MapConceptArt.cs        [created — illustrative drawing]
+│   ├── MapConceptArt.cs        [created — drawing lifecycle and labels]
 │   ├── MapConceptViewer.cs     [created — seed controls, navigation and export]
-│   ├── MapConceptGenerator.cs  [created — FastNoiseLite coastlines]
-│   └── Configuration/          [created — MapConceptMaster.tres defaults]
+│   ├── MapConceptGenerator.cs  [created — thin generation coordinator]
+│   ├── Configuration/          [created — MapConceptMaster.tres defaults]
+│   ├── Generation/             [created — land/noise, coast contours, islets, seed, geometry]
+│   └── Rendering/              [created — natural drawing, features, visual helpers]
 ├── PLAYER/                     [created]
 │   ├── README.md                [created]
 │   ├── Player.tscn              [created]

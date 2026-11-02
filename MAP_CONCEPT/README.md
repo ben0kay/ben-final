@@ -32,13 +32,35 @@ The map status displays **actual computed land area** and placed island count. C
 
 **Known limitations:** This is a 2D concept-quality coastline model, not a guarantee of physically realistic geography. Narrow cut-throughs depend on grid resolution. Very small islands or canals may disappear when simplified, the validation may select a later deterministic attempt, deep sea cuts can detach peninsulas, and inland water holes are not rendered as lakes. We can tune shape distributions after inspecting multiple F6 screenshots. The small density grid and contour data are meant for **map concept authoring**, not directly for 3D terrain, physics or streaming.
 
-## Files and data
+## Code ownership — modular structure
 
-- `MapConceptGenerator.cs`: non-radial land/water density, FastNoiseLite, sea cuts, marching squares, contour validation, offshore islands.
-- `Configuration/MapConceptSettings.cs` and `MapConceptMaster.tres`: default parameters and adjustable bounds.
-- `MapConceptLayout.cs`: both layout modes, numbered authored region/POI IDs and JSON blueprint.
-- `MapConceptArt.cs`: shared illustrated map rendering.
-- `MapConceptViewer.cs` and `Scene_MapConcept.tscn`: F6 input, sliders, camera, export and labels.
+**Refactor-only cleanup (November 2, 2026):** MAP2.0B's procedural formulas, contour logic, seed consumption, retry order, rendering order, scene paths, F6 controls and JSON schema 4 are intentionally unchanged. Existing seeds and sliders should reproduce the same maps; this code split is **not a new generation version**. The owner is testing MAP2.0B visually, so do not mix algorithm improvements into this reorganization.
+
+```text
+MAP_CONCEPT/
+├── Scene_MapConcept.tscn             F6 viewer scene (unchanged path)
+├── MapConceptViewer.cs              Input, UI, regeneration and export
+├── MapConceptLayout.cs              Map data and original numbered authored preset
+├── MapConceptGenerator.cs           Thin seeded generation coordinator + validation
+├── MapConceptArt.cs                 Scene-attached drawing lifecycle and labels
+├── Configuration/
+│   ├── MapConceptSettings.cs         Typed slider defaults and validation
+│   └── MapConceptMaster.tres         Inspector-editable defaults
+├── Generation/
+│   ├── MapConceptLandField.cs        FastNoiseLite, land regions, peninsulas and ocean cuts
+│   ├── MapConceptCoastlineContours.cs Marching squares, loop tracing, simplification
+│   ├── MapConceptOffshoreIslands.cs  Placement and coastline-clearance checks
+│   ├── MapConceptGeometry.cs         Polygon area and bounds
+│   └── MapConceptSeedStream.cs       Deterministic SplitMix64 seed stream
+└── Rendering/
+    ├── MapConceptNaturalPainter.cs  Water, shore, ground, forests and mountains
+    ├── MapConceptFeaturePainter.cs  Rivers, roads, sites and map decorations
+    └── MapConceptDrawingGeometry.cs Visual interpolation, bounds and noise-hash helpers
+```
+
+**Ownership rules:** `MapConceptGenerator` only orchestrates; each `Generation/` helper has a specific purpose and must remain independent of the viewer/scene. `MapConceptArt` remains the **only Node2D script attached to MapArtwork**, with its `_Draw()` event delegating to ordinary non-node renderer classes in the original drawing order. The two painters call CanvasItem's draw methods synchronously within that same callback; they are not new scene nodes or frame-processing scripts. `MapConceptDrawingGeometry` contains the original math utilities, shared by painters and labels.
+
+This avoids splitting a Godot-attached C# class into same-named partial script files, which can cause script-path/type-resolution problems. Keep the existing scene and resource paths stable. The `Generation/` and `Rendering/` folders do not depend on any external addons, new assets or changes to `WORLD/`.
 
 The **Export map blueprint JSON** button writes the currently displayed layout to `user://map_concept_layout.json`. **Schema 4** includes `layout_mode`, exact `world_seed` as a decimal string, generator version **2**, sliders including `landmass_complexity` and `ocean_penetration`, land polygons and optional features. Earlier schema versions are only draft exports. These are **2D illustrative coordinates** (X east, Y south), and `MetresPerUnit=4` is merely a provisional scale hint.
 
@@ -52,4 +74,4 @@ The 3D translation and the BW-W4 streaming programme are **still separate and un
 4. Switch to **Authored Preset**, confirm original forests, mountains, towns and roads remain intact, then return to Procedural.
 5. Export identical settings twice, compare JSON, and confirm `world_seed`, `generator_version=2`, `schema=4`. Check zoom, pan, UI scrolling.
 
-**Verification performed by agent:** focused source/scene checks only; no installed Godot/.NET compiler or actual generated-map screenshots were available. Mark visual quality as *awaiting owner validation*.
+**Verification performed by agent:** focused source/scene checks and relocation equivalence review only; no installed Godot/.NET compiler or actual generated-map screenshots were available. Existing seed results are intended to stay identical, but **the refactor itself still awaits a local C# build and F6 run**. MAP2.0B's visual quality also remains awaiting owner validation.
