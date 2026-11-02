@@ -152,7 +152,7 @@ public sealed class MapConceptLayout
         var parameters = settings?.Validated();
         var data = new
         {
-            schema = 3, id = "island-concept-v1",
+            schema = 4, id = "island-concept-v1",
             layout_mode = IsProcedural ? "procedural_coastline" : "authored_preset",
             world_seed = worldSeed.ToString(CultureInfo.InvariantCulture),
             generator_version = IsProcedural ? MapConceptGenerator.GeneratorVersion : 0,
@@ -161,6 +161,8 @@ public sealed class MapConceptLayout
                 land_coverage = parameters.Value.LandCoverage,
                 coastline_roughness = parameters.Value.CoastRoughness,
                 bays_and_peninsulas = parameters.Value.BaysAndPeninsulas,
+                landmass_complexity = parameters.Value.LandmassComplexity,
+                ocean_penetration = parameters.Value.OceanPenetration,
                 offshore_islands_requested = parameters.Value.OffshoreIslands
             } : null,
             map_units = new { width = MapWidth, height = MapHeight, metres_per_unit = MetresPerUnit },

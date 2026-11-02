@@ -21,7 +21,7 @@ zoom = Vector2(0.9, 0.9)
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 350.0
-offset_bottom = 762.0
+offset_bottom = 876.0
 mouse_filter = 0
 
 [node name="PanelScroll" type="ScrollContainer" parent="UI/SidePanel"]
@@ -42,13 +42,13 @@ theme_override_font_sizes/font_size = 21
 
 [node name="Subheading" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "BW-MAP2.0  —  COASTLINE GENERATOR"
+text = "BW-MAP2.0B  —  LANDMASS GENERATOR"
 theme_override_font_sizes/font_size = 14
 
 [node name="Description" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 autowrap_mode = 3
-text = "Design different island coastlines from a seed. Forests, mountains and POIs will follow in later passes."
+text = "Generate branching islands, carved bays and winding sea inlets. Rivers, mountains and POIs will follow later."
 
 [node name="Navigation" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
@@ -103,7 +103,7 @@ value = 45.0
 
 [node name="PeninsulaLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "Bays and peninsulas: 55%"
+text = "Peninsula branching: 55%"
 
 [node name="PeninsulaSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
@@ -111,6 +111,28 @@ size_flags_horizontal = 3
 max_value = 100.0
 step = 1.0
 value = 55.0
+
+[node name="ComplexityLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "Landmass complexity: 65%"
+
+[node name="ComplexitySlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100.0
+step = 1.0
+value = 65.0
+
+[node name="OceanLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "Ocean penetration: 65%"
+
+[node name="OceanSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100.0
+step = 1.0
+value = 65.0
 
 [node name="IsletsLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
@@ -154,6 +176,6 @@ offset_top = -42.0
 offset_right = 1100.0
 offset_bottom = -14.0
 mouse_filter = 2
-text = "MAP2.0  •  COASTLINE ONLY  •  No terrain meshes / streaming  •  Authored preset preserved"
+text = "MAP2.0B  •  COMPOSED COASTLINES  •  No terrain meshes / streaming  •  Authored preset preserved"
 theme_override_colors/font_color = Color(0.14, 0.29, 0.30, 1)
 theme_override_font_sizes/font_size = 14

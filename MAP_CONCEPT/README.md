@@ -1,47 +1,55 @@
 # MAP_CONCEPT — Seeded island cartography
 
-**BW-MAP1:** The original numbered island concept was visually inspected by the owner in Godot. **BW-MAP2.0:** Seed-driven coastline generator implemented in source; Godot/.NET build and F6 appearance await local validation. This folder is isolated from 3D WORLD terrain, streaming and War Machine.
+**Status:** The owner tested the first authored map visually and confirmed MAP2.0's coastline-only islands looked acceptable but too consistently round. **BW-MAP2.0B** replaces radial coastlines with a 2D land/water field; **source implemented, pending Godot F6 visual validation**. This folder remains independent of WORLD, gameplay, terrain streaming and War Machine.
 
-## Run and controls
+## Run MAP2.0B
 
-Open `res://MAP_CONCEPT/Scene_MapConcept.tscn` in Godot 4 .NET and press **F6**.
+Open `res://MAP_CONCEPT/Scene_MapConcept.tscn` in Godot 4 .NET and press **F6**. Select **Procedural Seed** (default) for seeded coastlines or **Authored Preset (Island 1)** to restore the original numbered forests, mountains, towns, rivers and roads. The authored layout is untouched.
 
-- **Map source:** Select **Procedural Seed** (default) or **Authored Preset (Island 1)**. The original Island 1 retains its numbered forests/mountains/towns/roads; it is never overwritten.
-- **World seed:** Enter any valid signed 64-bit integer, including `254279584798` or `4594759834789`, in the **text field** and press Enter or **Generate island from seed**. Random Seed generates a new long seed and redraws.
-- **Landmass size target:** 35–75%, approximate relative control. The status panel shows the *actual polygon-area fraction*; large peninsulas and the map-edge safety margin can make it differ from the target.
-- **Coastline roughness:** 0–100% adjusts broad/detail noise.
-- **Bays and peninsulas:** 0–100% adjusts macro lobes and warp.
-- **Offshore islands:** Request 0–8. The bounded placement algorithm may produce fewer if the available sea has insufficient clearance; the status displays actual/requested.
-- **Mouse wheel** zooms under cursor; **left/middle/right drag** pans; **R** resets; **L** toggles labels. Scroll the side panel to see all controls.
-- **Export map blueprint JSON** writes the currently displayed layout and its settings to `user://map_concept_layout.json`; the panel displays the OS path.
+Use a signed 64-bit **World seed** (e.g. `254279584798` or `4594759834789`), or press **Random seed and regenerate**. Enter/Generate applies the seed and all sliders. Zoom with mouse wheel, pan by dragging, **R** resets view, **L** shows/hides labels, and the side panel scrolls.
 
-**Procedural mode generates coastline only.** Forests, mountains, rivers, lakes, roads, settlements and other POIs are intentionally *absent* until MAP2.1–2.3, not carried over from the authored preset. Changing seeds in **Authored Preset** affects only decorative marks, not geography.
-
-## Ownership and generation
-
-| File | Role |
+| Control | Effect |
 | --- | --- |
-| `Scene_MapConcept.tscn` | Independent F6 2D viewer; scrollable slider UI |
-| `Configuration/MapConceptSettings.cs` and `Configuration/MapConceptMaster.tres` | Validated defaults for seed/shape controls |
-| `MapConceptGenerator.cs` | FastNoiseLite noise layers, full-seed-derived streams, island contour and bounded offshore-island placement |
-| `MapConceptLayout.cs` | Original authored preset, generated-coastline factory, stable numbered feature IDs and JSON export |
-| `MapConceptArt.cs` | Procedural/artwork rendering and reusable labels |
-| `MapConceptViewer.cs` | 64-bit seed input, mode selection, sliders, navigation and export |
+| **Landmass size (35–75)** | Relative size of the large landforms, not an exact land-percent target |
+| **Landmass complexity (0–100)** | Number/variation of overlapping land regions, peninsula arms and large-scale shoreline deformation |
+| **Ocean penetration (0–100)** | How deeply curved, ocean-connected sea inlets enter the land; near zero suppresses them |
+| **Peninsula branching (0–100)** | Length/number/width of irregular connected land arms |
+| **Coastline roughness (0–100)** | Secondary shore detail and noise warping, rather than controlling the entire silhouette |
+| **Offshore islands (0–8)** | Requested maximum small islands; may be fewer where sea space and clearance disallow them |
 
-The generator uses full-length signed `long` seed values. A deterministic SplitMix64 stream derives **32-bit FastNoiseLite sub-seeds** and shape parameters, avoiding seed truncation. A radial contour with positive radius and monotonically ordered angles ensures **one connected, non-self-intersecting main island**. The shore is kept inside an inset rectangular safe zone. Fine coastline noise, macro bays and island rotation/axis ratio provide variety. Offshore islands are small bounded polygons, placed outside the coast with minimum clearance from mainland and from other islands.
+The map status displays **actual computed land area** and placed island count. Changing the seed now affects entire coastlines, not merely slightly different ripples on an ellipse. Different seeds may yield compact, extended, multi-armed or heavily indented landmasses, depending on the sliders. There is no promise that every single seed will produce a perfect coastline—this is an experimental generator intended for visual iteration.
 
-This deliberately constrained first algorithm is *star-shaped*; extreme fjords, true archipelagos, more elaborate coastline erosion, hydrology and geographically valid biome/city placement are subsequent experiments. Slider percentages are not mathematical guarantees of visual quality. Regeneration is on-demand (not per-frame), and no procedural resources are built while merely panning/zooming.
+**Ocean-connected inlets are saltwater**, sometimes narrowing enough to resemble tidal rivers. Proper *freshwater* rivers, inland lakes, drainage basins and watershed simulation are **future MAP2.1+ tasks**, not part of MAP2.0B. Similarly, procedural mode still has **no generated mountains, forests, towns/cities, POIs or roads**.
 
-## Export schema and future terrain
+## How the generator works
 
-Schema **3** includes `layout_mode`, exact `world_seed` **as a string**, `generator_version`, `generation_settings`, `coastline`, `islets`, and existing `regions`, `routes`, `sites` lists (empty for the current procedural mode). Older schema-1/2 files are drafts. The coordinates remain **2D illustrative units** (X east, Y south; eventual world Z). The existing 4-metres-per-unit hint is **not** an approved playable island size. Do not mistake these polygons for a terrain heightmap or streamed 3D chunks.
+1. A deterministic SplitMix64 stream derives independent random values and 32-bit FastNoiseLite seeds from the **full 64-bit input**.
+2. One large mainland core is connected to **overlapping irregular ellipses and curved/tapered land arms**. This is deliberately *not* a polar radius around a single centre.
+3. A small bounded number of **curved sea channels** is carved from ocean to inland. Mouths are wide, with optional inland basins and narrower ends. Domain warp and layered noise perturb the larger land forms.
+4. A finite **8-map-unit land/water grid** is sampled. A local marching-squares implementation interpolates crossings, resolves ambiguous diagonal cases, traces closed land contours, and simplifies edges before rendering.
+5. The **largest viable land contour** is the mainland. A bounded deterministic validation/retry pass favours a useful area, two-dimensional extent and dominant main island. Split-off fragments and optional additional offshore islands are bounded by the island-count setting. Invalid contours and internal water holes are excluded until proper lake support.
+6. The existing `MapConceptArt` renders the resulting polygons without knowing whether the data came from the authored preset or generator. Regeneration occurs **on demand**, not continuously while exploring the map.
 
-## Owner's F6 check
+**Known limitations:** This is a 2D concept-quality coastline model, not a guarantee of physically realistic geography. Narrow cut-throughs depend on grid resolution. Very small islands or canals may disappear when simplified, the validation may select a later deterministic attempt, deep sea cuts can detach peninsulas, and inland water holes are not rendered as lakes. We can tune shape distributions after inspecting multiple F6 screenshots. The small density grid and contour data are meant for **map concept authoring**, not directly for 3D terrain, physics or streaming.
 
-1. With identical sliders, generate `254279584798` and `4594759834789`; verify significantly different coastlines and intact sea.
-2. Regenerate each seed twice; the coastline/islets should match exactly. Change each slider and check that land stays inside the border.
-3. Switch to **Authored Preset**; verify its original numbered forests, mountains, towns, routes and icons remain intact. Switch back and check procedural re-generation.
-4. Export at the same seed/settings twice; JSON should match, and its exact seed string and generator version should be present. Check mouse panning, zoom, labels, panel scrolling.
-5. Confirm `SCENE/Scene_World.tscn` remains unchanged.
+## Files and data
 
-**Verification:** Source and scene-reference checks only by the implementing agent; no Godot or .NET runtime was available. The owner's earlier screenshot establishes MAP1's visible scene, not MAP2.0's visual quality.
+- `MapConceptGenerator.cs`: non-radial land/water density, FastNoiseLite, sea cuts, marching squares, contour validation, offshore islands.
+- `Configuration/MapConceptSettings.cs` and `MapConceptMaster.tres`: default parameters and adjustable bounds.
+- `MapConceptLayout.cs`: both layout modes, numbered authored region/POI IDs and JSON blueprint.
+- `MapConceptArt.cs`: shared illustrated map rendering.
+- `MapConceptViewer.cs` and `Scene_MapConcept.tscn`: F6 input, sliders, camera, export and labels.
+
+The **Export map blueprint JSON** button writes the currently displayed layout to `user://map_concept_layout.json`. **Schema 4** includes `layout_mode`, exact `world_seed` as a decimal string, generator version **2**, sliders including `landmass_complexity` and `ocean_penetration`, land polygons and optional features. Earlier schema versions are only draft exports. These are **2D illustrative coordinates** (X east, Y south), and `MetresPerUnit=4` is merely a provisional scale hint.
+
+The 3D translation and the BW-W4 streaming programme are **still separate and unchanged**.
+
+## Short owner test (Godot required)
+
+1. Build C#, press F6, regenerate `254279584798` and `4594759834789` with the same controls; confirm the landmasses vary in overall structure and do not clip the map frame.
+2. Try **Ocean Penetration 0 vs 100**, then **Landmass Complexity 0 vs 100** and **Peninsula Branching 0 vs 100**, using the same seed. Note which coastlines look interesting and which look unnatural.
+3. Regenerate the same seed/settings twice and verify identical coastlines. Verify island counts and no unbounded retries/frozen frame.
+4. Switch to **Authored Preset**, confirm original forests, mountains, towns and roads remain intact, then return to Procedural.
+5. Export identical settings twice, compare JSON, and confirm `world_seed`, `generator_version=2`, `schema=4`. Check zoom, pan, UI scrolling.
+
+**Verification performed by agent:** focused source/scene checks only; no installed Godot/.NET compiler or actual generated-map screenshots were available. Mark visual quality as *awaiting owner validation*.

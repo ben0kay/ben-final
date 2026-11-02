@@ -14,7 +14,9 @@ public partial class MapConceptViewer : Node2D
     private CheckBox _labels = null!;
     private Label _status = null!;
     private Label _coverageText = null!, _roughnessText = null!, _peninsulaText = null!, _isletsText = null!;
+    private Label _complexityText = null!, _oceanText = null!;
     private HSlider _coverage = null!, _roughness = null!, _peninsulas = null!, _islets = null!;
+    private HSlider _complexity = null!, _ocean = null!;
     private Button _rebuild = null!, _randomSeed = null!, _reset = null!, _export = null!;
     private long _activeSeed;
     private MapConceptParameters? _activeParameters;
@@ -29,7 +31,7 @@ public partial class MapConceptViewer : Node2D
     {
         if (Settings == null)
         {
-            GD.PushError("[MAP2.0] Missing MapConceptMaster.tres resource.");
+            GD.PushError("[MAP2.0B] Missing MapConceptMaster.tres resource.");
             return;
         }
         _camera = GetNode<Camera2D>("MapCamera");
@@ -42,10 +44,14 @@ public partial class MapConceptViewer : Node2D
         _roughness = GetNode<HSlider>(ControlRoot + "RoughnessSlider");
         _peninsulas = GetNode<HSlider>(ControlRoot + "PeninsulaSlider");
         _islets = GetNode<HSlider>(ControlRoot + "IsletsSlider");
+        _complexity = GetNode<HSlider>(ControlRoot + "ComplexitySlider");
+        _ocean = GetNode<HSlider>(ControlRoot + "OceanSlider");
         _coverageText = GetNode<Label>(ControlRoot + "CoverageLabel");
         _roughnessText = GetNode<Label>(ControlRoot + "RoughnessLabel");
         _peninsulaText = GetNode<Label>(ControlRoot + "PeninsulaLabel");
         _isletsText = GetNode<Label>(ControlRoot + "IsletsLabel");
+        _complexityText = GetNode<Label>(ControlRoot + "ComplexityLabel");
+        _oceanText = GetNode<Label>(ControlRoot + "OceanLabel");
         _rebuild = GetNode<Button>(ControlRoot + "RebuildButton");
         _randomSeed = GetNode<Button>(ControlRoot + "RandomSeedButton");
         _reset = GetNode<Button>(ControlRoot + "ResetViewButton");
@@ -59,6 +65,8 @@ public partial class MapConceptViewer : Node2D
         _roughness.Value = Settings.CoastRoughness;
         _peninsulas.Value = Settings.BaysAndPeninsulas;
         _islets.Value = Settings.OffshoreIslands;
+        _complexity.Value = Settings.LandmassComplexity;
+        _ocean.Value = Settings.OceanPenetration;
         _labels.ButtonPressed = true;
 
         _mode.ItemSelected += OnModeSelected;
@@ -72,6 +80,8 @@ public partial class MapConceptViewer : Node2D
         _roughness.ValueChanged += UpdateSliderLabels;
         _peninsulas.ValueChanged += UpdateSliderLabels;
         _islets.ValueChanged += UpdateSliderLabels;
+        _complexity.ValueChanged += UpdateSliderLabels;
+        _ocean.ValueChanged += UpdateSliderLabels;
         UpdateSliderLabels(0);
         _camera.MakeCurrent();
         ResetView();
@@ -92,6 +102,8 @@ public partial class MapConceptViewer : Node2D
         if (GodotObject.IsInstanceValid(_roughness)) _roughness.ValueChanged -= UpdateSliderLabels;
         if (GodotObject.IsInstanceValid(_peninsulas)) _peninsulas.ValueChanged -= UpdateSliderLabels;
         if (GodotObject.IsInstanceValid(_islets)) _islets.ValueChanged -= UpdateSliderLabels;
+        if (GodotObject.IsInstanceValid(_complexity)) _complexity.ValueChanged -= UpdateSliderLabels;
+        if (GodotObject.IsInstanceValid(_ocean)) _ocean.ValueChanged -= UpdateSliderLabels;
     }
     #endregion
 
@@ -176,6 +188,8 @@ public partial class MapConceptViewer : Node2D
         _roughness.Editable = procedural;
         _peninsulas.Editable = procedural;
         _islets.Editable = procedural;
+        _complexity.Editable = procedural;
+        _ocean.Editable = procedural;
         _rebuild.Text = procedural ? "Generate island from seed" : "Reload authored preset";
         GenerateMap();
     }
@@ -185,8 +199,10 @@ public partial class MapConceptViewer : Node2D
     {
         _coverageText.Text = $"Landmass size target: {(int)_coverage.Value}%";
         _roughnessText.Text = $"Coastline roughness: {(int)_roughness.Value}%";
-        _peninsulaText.Text = $"Bays and peninsulas: {(int)_peninsulas.Value}%";
+        _peninsulaText.Text = $"Peninsula branching: {(int)_peninsulas.Value}%";
         _isletsText.Text = $"Offshore islands requested: {(int)_islets.Value}";
+        _complexityText.Text = $"Landmass complexity: {(int)_complexity.Value}%";
+        _oceanText.Text = $"Ocean penetration: {(int)_ocean.Value}%";
     }
 
     // =========================================================
@@ -214,7 +230,8 @@ public partial class MapConceptViewer : Node2D
         if (procedural)
         {
             parameters = Settings.Snapshot(seed, (int)_coverage.Value, (int)_roughness.Value,
-                (int)_peninsulas.Value, (int)_islets.Value);
+                (int)_peninsulas.Value, (int)_islets.Value,
+                (int)_complexity.Value, (int)_ocean.Value);
             layout = MapConceptGenerator.Generate(parameters.Value);
         }
         else layout = MapConceptLayout.CreateDefault();
@@ -226,12 +243,12 @@ public partial class MapConceptViewer : Node2D
 
         _status.Text = procedural
             ? $"Seed {seed} | Coastline v{MapConceptGenerator.GeneratorVersion}\n" +
-              $"Approx. land: {MapConceptGenerator.LandPercent(layout):F1}% of map | " +
-              $"islands: {layout.Islets.Count}/{parameters.Value.OffshoreIslands}\n" +
-              "Coastline only — biomes, lakes, roads and POIs are MAP2.1+."
+              $"Land: {MapConceptGenerator.LandPercent(layout):F1}% of map | " +
+              $"offshore islands: {layout.Islets.Count}/{parameters.Value.OffshoreIslands}\n" +
+              "Branched land / ocean inlets. Inland rivers and POIs come later."
             : $"Authored preset Island 1 | Decorative seed {seed}\n" +
               "Original forests, mountains, roads and sites preserved.";
-        GD.Print($"[MAP2.0] {(procedural ? "Procedural island" : "Authored preset")} seed {seed}; " +
+        GD.Print($"[MAP2.0B] {(procedural ? "Procedural island" : "Authored preset")} seed {seed}; " +
             $"land {MapConceptGenerator.LandPercent(layout):F1}%; islets {layout.Islets.Count}.");
     }
 
@@ -247,13 +264,13 @@ public partial class MapConceptViewer : Node2D
         if (file == null)
         {
             _status.Text = "Could not export blueprint to user://. See Godot Output.";
-            GD.PushWarning("[MAP2.0] Could not open map blueprint export.");
+            GD.PushWarning("[MAP2.0B] Could not open map blueprint export.");
             return;
         }
         file.StoreString(_art.Layout.BlueprintJson(_activeSeed, _activeParameters));
         file.Flush();
         _status.Text = "Current map blueprint saved to:\n" + ProjectSettings.GlobalizePath(path);
-        GD.Print("[MAP2.0] Exported blueprint: " + ProjectSettings.GlobalizePath(path));
+        GD.Print("[MAP2.0B] Exported blueprint: " + ProjectSettings.GlobalizePath(path));
     }
     #endregion
 }

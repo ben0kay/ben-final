@@ -9,3 +9,5 @@ LandCoverage = 60
 CoastRoughness = 45
 BaysAndPeninsulas = 55
 OffshoreIslands = 2
+LandmassComplexity = 65
+OceanPenetration = 65
