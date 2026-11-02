@@ -42,13 +42,13 @@ theme_override_font_sizes/font_size = 21
 
 [node name="Subheading" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "BW-MAP2.0B  —  LANDMASS GENERATOR"
+text = "BW-MAP2.1  —  ISLAND + MOUNTAINS"
 theme_override_font_sizes/font_size = 14
 
 [node name="Description" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 autowrap_mode = 3
-text = "Generate branching islands, carved bays and winding sea inlets. Rivers, mountains and POIs will follow later."
+text = "Generate coastlines, mountain ranges and 2D elevations from a repeatable seed. Freshwater and settlements come later."
 
 [node name="Navigation" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
@@ -145,6 +145,66 @@ max_value = 8.0
 step = 1.0
 value = 2.0
 
+[node name="MountainSection" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "MOUNTAIN / ELEVATION SETTINGS"
+theme_override_font_sizes/font_size = 14
+
+[node name="MountainMinLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "Minimum mountain ranges: 1"
+
+[node name="MountainMinSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 8.0
+step = 1.0
+value = 1.0
+
+[node name="MountainMaxLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "Maximum mountain ranges: 5"
+
+[node name="MountainMaxSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 8.0
+step = 1.0
+value = 5.0
+
+[node name="MountainCoverageLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "Mountain coverage: 25%"
+
+[node name="MountainCoverageSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100.0
+step = 1.0
+value = 25.0
+
+[node name="MountainRuggednessLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "Mountain ruggedness: 60%"
+
+[node name="MountainRuggednessSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100.0
+step = 1.0
+value = 60.0
+
+[node name="MountainRidgeLengthLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "Ridge length: 55%"
+
+[node name="MountainRidgeLengthSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100.0
+step = 1.0
+value = 55.0
+
 [node name="RebuildButton" type="Button" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 text = "Generate island from seed"
@@ -176,6 +236,6 @@ offset_top = -42.0
 offset_right = 1100.0
 offset_bottom = -14.0
 mouse_filter = 2
-text = "MAP2.0B  •  COMPOSED COASTLINES  •  No terrain meshes / streaming  •  Authored preset preserved"
+text = "MAP2.1  •  COASTLINES + MOUNTAIN ELEVATION  •  No 3D terrain or streaming  •  Authored preset preserved"
 theme_override_colors/font_color = Color(0.14, 0.29, 0.30, 1)
 theme_override_font_sizes/font_size = 14

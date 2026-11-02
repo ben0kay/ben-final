@@ -5,7 +5,7 @@ using Godot;
 
 public static class MapConceptGenerator
 {
-    public const int GeneratorVersion = 2;
+    public const int GeneratorVersion = 3;
     private const int MaxAttempts = 5;
 
     #region Generation
@@ -56,7 +56,11 @@ public static class MapConceptGenerator
 
         // Explicit procedural-only safety fallback. Never accidentally attach
         // authored forests or towns to a procedural coastline.
-        if (best != null) return best;
+        if (best != null)
+        {
+            MapConceptMountainGenerator.Populate(best, parameters);
+            return best;
+        }
         var safeCoast = new Vector2[96];
         for (int i = 0; i < safeCoast.Length; i++)
         {
@@ -64,7 +68,9 @@ public static class MapConceptGenerator
             safeCoast[i] = new Vector2(Mathf.Cos(angle) * 350f,
                 Mathf.Sin(angle) * 255f);
         }
-        return MapConceptLayout.CreateProcedural(safeCoast);
+        var fallback = MapConceptLayout.CreateProcedural(safeCoast);
+        MapConceptMountainGenerator.Populate(fallback, parameters);
+        return fallback;
     }
 
     // =========================================================

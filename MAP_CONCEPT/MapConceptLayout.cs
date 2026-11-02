@@ -39,13 +39,15 @@ public sealed class MapConceptLayout
     public readonly List<ConceptRegion> Regions = new();
     public readonly List<ConceptSite> Sites = new();
     public readonly List<ConceptRoute> Routes = new();
+    public readonly List<ConceptMountainRidge> MountainRidges = new();
+    public MapConceptElevationGrid? Elevation { get; internal set; }
 
     public bool IsProcedural { get; private set; }
     private MapConceptLayout(Vector2[] coast) => Coast = coast;
 
     // =========================================================
-    // MAP2.0 generates coastlines only; biomes, rivers and POIs will be
-    // regenerated in later phases instead of inheriting misplaced preset sites.
+    // Procedural geography begins from coastlines. MAP2.1 adds mountain
+    // regions and elevations, but never inherits preset roads, towns or forests.
     public static MapConceptLayout CreateProcedural(Vector2[] coast) =>
         new(coast) { IsProcedural = true };
 
@@ -152,7 +154,7 @@ public sealed class MapConceptLayout
         var parameters = settings?.Validated();
         var data = new
         {
-            schema = 4, id = "island-concept-v1",
+            schema = 5, id = "island-concept-v1",
             layout_mode = IsProcedural ? "procedural_coastline" : "authored_preset",
             world_seed = worldSeed.ToString(CultureInfo.InvariantCulture),
             generator_version = IsProcedural ? MapConceptGenerator.GeneratorVersion : 0,
@@ -163,12 +165,31 @@ public sealed class MapConceptLayout
                 bays_and_peninsulas = parameters.Value.BaysAndPeninsulas,
                 landmass_complexity = parameters.Value.LandmassComplexity,
                 ocean_penetration = parameters.Value.OceanPenetration,
-                offshore_islands_requested = parameters.Value.OffshoreIslands
+                offshore_islands_requested = parameters.Value.OffshoreIslands,
+                mountain_regions_min = parameters.Value.MinMountainRegions,
+                mountain_regions_max = parameters.Value.MaxMountainRegions,
+                mountain_coverage = parameters.Value.MountainCoverage,
+                mountain_ruggedness = parameters.Value.MountainRuggedness,
+                mountain_ridge_length = parameters.Value.MountainRidgeLength
             } : null,
             map_units = new { width = MapWidth, height = MapHeight, metres_per_unit = MetresPerUnit },
             coordinate_convention = "X east, Y south (maps to world Z); map zero at island centre",
             coastline = Coords(Coast),
             islets = Islets.Select(Coords).ToArray(),
+            elevation = Elevation == null ? null : new
+            {
+                columns = MapConceptElevationGrid.Columns,
+                rows = MapConceptElevationGrid.Rows,
+                format = MapConceptElevationGrid.SampleFormat,
+                origin = new[] { MapConceptElevationGrid.Origin.X, MapConceptElevationGrid.Origin.Y },
+                step = new[] { MapConceptElevationGrid.Step.X, MapConceptElevationGrid.Step.Y },
+                heights = Elevation.HeightSamples
+            },
+            mountain_ridges = MountainRidges.Select(r => new
+            {
+                id = r.Id, number = r.Number, half_width = r.HalfWidth,
+                strength = r.Strength, centreline = Coords(r.Centreline)
+            }).ToArray(),
             regions = Regions.Select(z => new { id = z.Id, name = z.Name,
                 category = RegionCategory(z.Kind), number = z.Number, kind = z.Kind.ToString(),
                 density = z.Density, outline = Coords(z.Outline) }).ToArray(),

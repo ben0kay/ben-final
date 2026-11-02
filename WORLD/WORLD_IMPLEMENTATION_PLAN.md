@@ -8,13 +8,22 @@
 >
 > **Companion documents:** [WORLD_AUTHORING.md](WORLD_AUTHORING.md) explains the intended geology/terrain techniques; [README.md](README.md) explains existing files and how to run them; [root README](../README.md) tracks the project's milestone statuses; [CodePreferences](../CodePreferences.md) and [AGENTS](../AGENTS.md) govern coding and Git practice.
 
-## Independent map-concept experiment — BW-MAP1 (SOURCE IMPLEMENTED; AWAITING GODOT TEST)
+## Independent map-first authoring experiment — MAP1 through MAP2.1
 
-The owner wants to **design the island from a top-down map first**, then translate approved land/region/route/site placement data into procedural 3D generation **later**. A separate `MAP_CONCEPT/` folder now contains `Scene_MapConcept.tscn` (F6 cartography viewer), `MapConceptLayout.cs` (authoring coordinates and stable IDs), `MapConceptArt.cs` (vector styling), `MapConceptViewer.cs` (zoom/pan/seed/export) and a dedicated README. It does not read or mutate `WORLD/`, import War Machine content, create 3D meshes, solve streaming or establish final elevation values.
+The owner is designing a future finite island **as 2D geography first**, before any approved 3D translation. `MAP_CONCEPT/Scene_MapConcept.tscn` runs independently with **F6**, preserving the original numbered **Authored Preset** and the newer **Procedural Seed** mode.
 
-**Intent:** A deliberately authored main island, coastal islets, **numbered** forests/mountain groups/meadows/wetlands and settlement/landmark sites, rivers and roads. The owner tested the initial scene visually, then requested code-friendly numbered categories: Forest 1, Mountains 2, Town 1, etc. C# now derives labels and stable per-layout IDs (e.g. `forest_001`, `mountains_002`, `town_001`), while keeping site/vegetation subtype information. **City** and **Lake** feature sets have no members in the current map; they can be added as numbered categories when those features are actually created. The default layout is a placeholder **Island 1**, not approved island canon. Its integer seed still varies decorative tree/ground samples **without moving authored feature geometry**. **Future separate milestone:** seed-driven generation of the complete island shape, coast, mountain/forest regions, waterways, town/city/lake sites and their placements, with fixed-seed reproducibility, biome/geographic coherence, region validity and accessible plane-escape progression. This is an explicit goal, **not implemented by the numbering change**. `Export map blueprint JSON` writes `user://map_concept_layout.json` with raw 2D boundaries, IDs, route coordinates and a provisional scale hint. A future mapping pass must approve height/sea-level layers, coastline shaping, 3D coordinate transforms and building ground clearance before treating it as runtime terrain input.
+**Progress as of November 2, 2026:**
 
-**Do not conflate:** BW-MAP1 is an independent *visual authoring concept*, not BW-W4.1 terrain streaming. The previously established performance gate remains mandatory before actual War Machine gameplay transfers. **Godot build/F6 and visual acceptance are still pending.**
+- **BW-MAP1:** Numbered authored map preset with coastal features, mountains, forests, towns and candidate POIs.
+- **BW-MAP2.0 / MAP2.0B:** Full 64-bit seeded landmasses, branching peninsulas, deep ocean inlets and small islands, independently illustrated and exported. The owner confirmed MAP2.0B results looked OK so far; more visual polishing may follow.
+- **BW-MAP2.1 (source implemented; awaiting C# build/F6):** Deterministic inland mountain ridge paths, adjustable range count/coverage/ruggedness/length, named **Mountains 1...N** IDs, lowland/foothill/mountain **normalized 129×89 u16 elevation grid**, topographic drawing and **schema-5** blueprint export. Mountain-seed stream is separate from coastline generation; mountain sliders should not reshape the coast. This grid **is not yet actual metric terrain**.
+- **MAP2.2 planned:** Inland lakes, freshwater rivers and drainage based on elevation, keeping saltwater inlets separate.
+- **MAP2.3 planned:** Forest/meadow/wetland and biome zone placement.
+- **MAP2.4 planned:** Variable seeded towns/cities, roads and POIs, validated for flat land and connectivity.
+- **MAP2.5 planned:** Quality validation of many seeds, controlled variation, debug/export polish.
+- **MAP3.0 planned:** Approve map coordinate scale/sea level/height interpretation and build a separate translator to actual WORLD procedural terrain **only after an explicit integration decision**.
+
+**Separation rule:** MAP_CONCEPT currently does **not** change the `WORLD/` marching-cubes terrain, 3D chunk meshes, loading/LOD, camera or gameplay. The existing BW-W4 streaming measurement and performance gates remain authoritative and independent. Before map-to-world integration, validate map masks, slope/sea levels, road clearances, world-space determinism and chunk-local queries; do not assume an illustrated region polygon is a physical 3D site. Full owned roadmap: [MAP_CONCEPT/IMPLEMENTATION_PLAN.md](../MAP_CONCEPT/IMPLEMENTATION_PLAN.md), and feature guide: [MAP_CONCEPT/README.md](../MAP_CONCEPT/README.md).
 
 ## 1. Target and priorities
 

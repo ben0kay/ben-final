@@ -25,6 +25,8 @@ internal sealed class MapConceptNaturalPainter
         DrawWater();
         DrawLand();
         DrawRegionColours();
+        if (Layout.Elevation != null)
+            new MapConceptElevationPainter(Canvas, Layout.Elevation).Draw();
         DrawGroundMarks();
         DrawForests();
         DrawMountains();
@@ -73,6 +75,9 @@ internal sealed class MapConceptNaturalPainter
     {
         foreach (ConceptRegion region in Layout.Regions)
         {
+            // Procedural mountains use sampled elevation contours rather than
+            // an opaque ribbon that could colour ocean outside the coastline.
+            if (Layout.Elevation != null && region.Kind == ConceptRegionKind.Highlands) continue;
             Color shade = region.Kind switch
             {
                 ConceptRegionKind.PineForest => new Color(0.19f, 0.43f, 0.26f, 0.20f),
@@ -175,8 +180,12 @@ internal sealed class MapConceptNaturalPainter
             {
                 Vector2 p = MapConceptDrawingGeometry.RandomPoint(rng, bounds);
                 if (!MapConceptLayout.PointInPolygon(p, zone.Outline) || !Layout.IsOnLand(p)) continue;
-                float width = MapConceptDrawingGeometry.Range(rng, 9, 23), height = MapConceptDrawingGeometry.Range(rng, 14, 36);
-                DrawMountain(p, width, height);
+                float elevation = Layout.Elevation?.Sample(p) ?? 0.5f;
+                if (Layout.Elevation != null && elevation < 0.25f) continue;
+                float scale = Layout.Elevation == null ? 1f : Mathf.Lerp(0.75f, 1.3f, elevation);
+                float width = MapConceptDrawingGeometry.Range(rng, 9, 23),
+                    height = MapConceptDrawingGeometry.Range(rng, 14, 36);
+                DrawMountain(p, width * scale, height * scale);
             }
         }
     }

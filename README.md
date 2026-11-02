@@ -105,19 +105,18 @@ For example, a zombie's identity, health, senses, movement state, attacks, leade
 
 **Do not rush these systems into Ben Final now.** First validate **BW-W4.0**, build and test real **BW-W4.1 terrain streaming**, then disposable tree/grass/prop/dummy-entity stress tests and later LOD. Only after the streaming performance gate is accepted should War Machine components be reviewed **one system at a time**. The deep survival/sandbox/modding vision guides API boundaries and data ownership today; it does **not** authorize speculative gameplay rewrites, premature mod loaders or new permanent models.
 
-## Map-first island concept — BW-MAP1, MAP2.0 and MAP2.0B
+## Map-first island concept — BW-MAP1 through MAP2.1
 
-A separate illustrated map scene, [MAP_CONCEPT/Scene_MapConcept.tscn](MAP_CONCEPT/Scene_MapConcept.tscn), is independently runnable with **F6** and does not change `WORLD/` terrain or streaming.
+A separate illustrated **F6 island-design scene** lives in [MAP_CONCEPT/Scene_MapConcept.tscn](MAP_CONCEPT/Scene_MapConcept.tscn). It is independent of 3D terrain, streaming and gameplay.
 
-- **BW-MAP1:** Preserves the owner-viewed **Authored Preset (Island 1)** with numbered forest, mountain and settlement labels, rivers, roads and POIs.
-- **BW-MAP2.0:** Introduced full 64-bit seeded coastlines and the size/roughness/branching/islet controls; the owner confirmed they looked acceptable but too rounded.
-- **BW-MAP2.0B (source implemented; Godot validation pending):** Replaces the radial outline with **composed land regions and curved peninsula arms**, carves **ocean-connected deep bays and winding inlets**, applies FastNoiseLite, and extracts/validates coastlines via a small **marching-squares** land/water field. New sliders: **Landmass Complexity** and **Ocean Penetration**. The original authored preset remains selectable and untouched.
-- **Scope:** The procedural map still generates **coastline only**. Seed-driven mountains, forests, lakes, rivers, cities/towns, roads and other POIs are later phases; true 3D terrain and gameplay are entirely separate.
-- **Export:** JSON schema **4** stores the generated coastline polygons, exact full-length seed, generation version and settings. See [MAP_CONCEPT/README.md](MAP_CONCEPT/README.md) for controls and limitations.
+- **MAP1:** Preserved **Authored Preset (Island 1)** with numbered forest, mountain and settlement regions, roads and rivers.
+- **MAP2.0:** Full 64-bit seed-driven land generation, ocean, islets and interactive coast-shape controls; the owner requested more varied geography.
+- **MAP2.0B:** Composite landmasses, branching peninsulas, winding ocean-connected sea inlets, FastNoiseLite, marching squares; owner reported the maps looked OK so far. Subsequent code was modularized in `Generation/` and `Rendering/`.
+- **MAP2.1 (implemented in source; Godot validation pending):** Builds **seeded mountain ranges** from inland ridge paths, with configurable **minimum and maximum mountain counts, mountain coverage, ruggedness and ridge length**. A 129 × 89 **2D elevation grid** supplies lowland/foothill heights, mountain relief and illustrated contour lines. All mountain IDs follow numbered categories. Mountain sliders do not alter coastline seed generation.
+- **Current limits:** The new elevation is normalized illustrative data, not metric 3D terrain. Procedural freshwater lakes/rivers, forests/biomes, towns/cities/roads and other POIs are **future phases**. The original authored preset and its landmarks remain intact.
+- **Export:** JSON **schema 5**, generator **version 3**, including exact 64-bit seed string, generation settings, coastline polygons, mountain centerlines and normalized u16 elevation samples for later translation to 3D.
 
-**MAP2.0B modular cleanup (source refactor, awaiting C# verification):** `MAP_CONCEPT/Generation/` now owns the non-radial land field, contour tracing, offshore island placement and deterministic seed helpers; `MAP_CONCEPT/Rendering/` owns the natural and feature painters and illustration utilities. `MapConceptGenerator.cs` and `MapConceptArt.cs` retain their existing public interfaces and scene paths as thin coordinators. **No procedural formulas, draw order, seed sequences, generator version or JSON export format were intentionally changed.**
-
-The aim is a rich variety of coherent seeded landmasses **before** designing the interior geography.
+Implementation roadmap and validation: [MAP_CONCEPT/IMPLEMENTATION_PLAN.md](MAP_CONCEPT/IMPLEMENTATION_PLAN.md). Usage and file ownership: [MAP_CONCEPT/README.md](MAP_CONCEPT/README.md). **No changes to `WORLD/` runtime terrain or streaming** are part of MAP2.1.
 
 ## Core development approach: independent scenes
 
@@ -160,7 +159,8 @@ ben-final/
 │   ├── MapConceptGenerator.cs  [created — thin generation coordinator]
 │   ├── Configuration/          [created — MapConceptMaster.tres defaults]
 │   ├── Generation/             [created — land/noise, coast contours, islets, seed, geometry]
-│   └── Rendering/              [created — natural drawing, features, visual helpers]
+│   ├── Rendering/              [created — natural/feature/elevation drawing]
+│   └── IMPLEMENTATION_PLAN.md  [created — MAP2.1 milestone + future roadmap]
 ├── PLAYER/                     [created]
 │   ├── README.md                [created]
 │   ├── Player.tscn              [created]
@@ -287,7 +287,9 @@ The terrain vision is **a coherent finite island**: varied coastline and ocean, 
 | **BW-W3B** | True 3D caves and overhangs | Full volumetric density, vertical chunk ownership, cave entrances, editable terrain and basements | **Planned** |
 | **BW-MAP1** | Independent illustrated island blueprint | Zoomable F6 authored preset with numbered regions/sites and JSON export | **Owner-viewed initial map; numbered label pass pending recheck** |
 | **BW-MAP2.0** | Seeded island coastline | 64-bit seed, FastNoiseLite, basic radial coastlines and adjustable settings | **Owner-tested; shapes too rounded** |
-| **BW-MAP2.0B** | Composed mainland and deep ocean inlets | Overlapping land masses, branching peninsula arms, ocean-carved channels, marching-squares contours, new sliders and schema-4 export | **Implemented in source — awaiting Godot validation** |
+| **BW-MAP2.0B** | Composed mainland and deep ocean inlets | Overlapping land masses, branching peninsula arms, ocean-carved channels, marching-squares contours and modular cleanup | **Owner reports maps look OK; further quality validation ongoing** |
+| **BW-MAP2.1** | Mountains and elevation | Variable seeded mountain regions, connected inland ridges, foothills, normalized 129×89 elevation grid, contour shading, 5 F6 sliders and schema-5 export | **Implemented in source — awaiting Godot C#/F6 validation** |
+| **BW-MAP2.2–MAP2.5** | Map hydrology, biomes, settlements and polish | Lakes/rivers, forests, towns/cities/roads/POIs and seed-quality acceptance (see MAP_CONCEPT plan) | **Planned** |
 | **BW-W4.0** | Streaming measurement baseline | F1 manual capture and fixed 60/180 m/s fly routes, frame-time histogram (median/P95/P99/worst), GC and terrain timing breakdown | **Implemented in source — awaiting Godot validation** |
 | **BW-W4** | Streaming and LOD | Camera-centred terrain residency, bounded load/unload queues, collision readiness, distance LOD and transitions; current preview still retains all generated chunks | **Planned — next priority** |
 | **BW-W4T** | Disposable streaming stress tests | Temporary trees/grass/ferns, props and dummy actors; repeatable fast-travel tests, frame-time/memory instrumentation and cleanup **before War Machine imports** | **Planned — gated on BW-W4 foundations** |

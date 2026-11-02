@@ -15,8 +15,12 @@ public partial class MapConceptViewer : Node2D
     private Label _status = null!;
     private Label _coverageText = null!, _roughnessText = null!, _peninsulaText = null!, _isletsText = null!;
     private Label _complexityText = null!, _oceanText = null!;
+    private Label _mountainMinText = null!, _mountainMaxText = null!,
+        _mountainCoverageText = null!, _ruggednessText = null!, _ridgeLengthText = null!;
     private HSlider _coverage = null!, _roughness = null!, _peninsulas = null!, _islets = null!;
     private HSlider _complexity = null!, _ocean = null!;
+    private HSlider _mountainMin = null!, _mountainMax = null!,
+        _mountainCoverage = null!, _ruggedness = null!, _ridgeLength = null!;
     private Button _rebuild = null!, _randomSeed = null!, _reset = null!, _export = null!;
     private long _activeSeed;
     private MapConceptParameters? _activeParameters;
@@ -46,12 +50,22 @@ public partial class MapConceptViewer : Node2D
         _islets = GetNode<HSlider>(ControlRoot + "IsletsSlider");
         _complexity = GetNode<HSlider>(ControlRoot + "ComplexitySlider");
         _ocean = GetNode<HSlider>(ControlRoot + "OceanSlider");
+        _mountainMin = GetNode<HSlider>(ControlRoot + "MountainMinSlider");
+        _mountainMax = GetNode<HSlider>(ControlRoot + "MountainMaxSlider");
+        _mountainCoverage = GetNode<HSlider>(ControlRoot + "MountainCoverageSlider");
+        _ruggedness = GetNode<HSlider>(ControlRoot + "MountainRuggednessSlider");
+        _ridgeLength = GetNode<HSlider>(ControlRoot + "MountainRidgeLengthSlider");
         _coverageText = GetNode<Label>(ControlRoot + "CoverageLabel");
         _roughnessText = GetNode<Label>(ControlRoot + "RoughnessLabel");
         _peninsulaText = GetNode<Label>(ControlRoot + "PeninsulaLabel");
         _isletsText = GetNode<Label>(ControlRoot + "IsletsLabel");
         _complexityText = GetNode<Label>(ControlRoot + "ComplexityLabel");
         _oceanText = GetNode<Label>(ControlRoot + "OceanLabel");
+        _mountainMinText = GetNode<Label>(ControlRoot + "MountainMinLabel");
+        _mountainMaxText = GetNode<Label>(ControlRoot + "MountainMaxLabel");
+        _mountainCoverageText = GetNode<Label>(ControlRoot + "MountainCoverageLabel");
+        _ruggednessText = GetNode<Label>(ControlRoot + "MountainRuggednessLabel");
+        _ridgeLengthText = GetNode<Label>(ControlRoot + "MountainRidgeLengthLabel");
         _rebuild = GetNode<Button>(ControlRoot + "RebuildButton");
         _randomSeed = GetNode<Button>(ControlRoot + "RandomSeedButton");
         _reset = GetNode<Button>(ControlRoot + "ResetViewButton");
@@ -67,6 +81,11 @@ public partial class MapConceptViewer : Node2D
         _islets.Value = Settings.OffshoreIslands;
         _complexity.Value = Settings.LandmassComplexity;
         _ocean.Value = Settings.OceanPenetration;
+        _mountainMin.Value = Settings.MinMountainRegions;
+        _mountainMax.Value = Settings.MaxMountainRegions;
+        _mountainCoverage.Value = Settings.MountainCoverage;
+        _ruggedness.Value = Settings.MountainRuggedness;
+        _ridgeLength.Value = Settings.MountainRidgeLength;
         _labels.ButtonPressed = true;
 
         _mode.ItemSelected += OnModeSelected;
@@ -82,6 +101,11 @@ public partial class MapConceptViewer : Node2D
         _islets.ValueChanged += UpdateSliderLabels;
         _complexity.ValueChanged += UpdateSliderLabels;
         _ocean.ValueChanged += UpdateSliderLabels;
+        _mountainMin.ValueChanged += OnMinMountainsChanged;
+        _mountainMax.ValueChanged += OnMaxMountainsChanged;
+        _mountainCoverage.ValueChanged += UpdateSliderLabels;
+        _ruggedness.ValueChanged += UpdateSliderLabels;
+        _ridgeLength.ValueChanged += UpdateSliderLabels;
         UpdateSliderLabels(0);
         _camera.MakeCurrent();
         ResetView();
@@ -104,6 +128,11 @@ public partial class MapConceptViewer : Node2D
         if (GodotObject.IsInstanceValid(_islets)) _islets.ValueChanged -= UpdateSliderLabels;
         if (GodotObject.IsInstanceValid(_complexity)) _complexity.ValueChanged -= UpdateSliderLabels;
         if (GodotObject.IsInstanceValid(_ocean)) _ocean.ValueChanged -= UpdateSliderLabels;
+        if (GodotObject.IsInstanceValid(_mountainMin)) _mountainMin.ValueChanged -= OnMinMountainsChanged;
+        if (GodotObject.IsInstanceValid(_mountainMax)) _mountainMax.ValueChanged -= OnMaxMountainsChanged;
+        if (GodotObject.IsInstanceValid(_mountainCoverage)) _mountainCoverage.ValueChanged -= UpdateSliderLabels;
+        if (GodotObject.IsInstanceValid(_ruggedness)) _ruggedness.ValueChanged -= UpdateSliderLabels;
+        if (GodotObject.IsInstanceValid(_ridgeLength)) _ridgeLength.ValueChanged -= UpdateSliderLabels;
     }
     #endregion
 
@@ -190,8 +219,29 @@ public partial class MapConceptViewer : Node2D
         _islets.Editable = procedural;
         _complexity.Editable = procedural;
         _ocean.Editable = procedural;
+        _mountainMin.Editable = procedural;
+        _mountainMax.Editable = procedural;
+        _mountainCoverage.Editable = procedural;
+        _ruggedness.Editable = procedural;
+        _ridgeLength.Editable = procedural;
         _rebuild.Text = procedural ? "Generate island from seed" : "Reload authored preset";
         GenerateMap();
+    }
+
+    // =========================================================
+    private void OnMinMountainsChanged(double value)
+    {
+        if (_mountainMin.Value > _mountainMax.Value)
+            _mountainMax.Value = _mountainMin.Value;
+        UpdateSliderLabels(value);
+    }
+
+    // =========================================================
+    private void OnMaxMountainsChanged(double value)
+    {
+        if (_mountainMax.Value < _mountainMin.Value)
+            _mountainMin.Value = _mountainMax.Value;
+        UpdateSliderLabels(value);
     }
 
     // =========================================================
@@ -203,6 +253,11 @@ public partial class MapConceptViewer : Node2D
         _isletsText.Text = $"Offshore islands requested: {(int)_islets.Value}";
         _complexityText.Text = $"Landmass complexity: {(int)_complexity.Value}%";
         _oceanText.Text = $"Ocean penetration: {(int)_ocean.Value}%";
+        _mountainMinText.Text = $"Minimum mountain ranges: {(int)_mountainMin.Value}";
+        _mountainMaxText.Text = $"Maximum mountain ranges: {(int)_mountainMax.Value}";
+        _mountainCoverageText.Text = $"Mountain coverage: {(int)_mountainCoverage.Value}%";
+        _ruggednessText.Text = $"Mountain ruggedness: {(int)_ruggedness.Value}%";
+        _ridgeLengthText.Text = $"Ridge length: {(int)_ridgeLength.Value}%";
     }
 
     // =========================================================
@@ -231,7 +286,10 @@ public partial class MapConceptViewer : Node2D
         {
             parameters = Settings.Snapshot(seed, (int)_coverage.Value, (int)_roughness.Value,
                 (int)_peninsulas.Value, (int)_islets.Value,
-                (int)_complexity.Value, (int)_ocean.Value);
+                (int)_complexity.Value, (int)_ocean.Value,
+                (int)_mountainMin.Value, (int)_mountainMax.Value,
+                (int)_mountainCoverage.Value, (int)_ruggedness.Value,
+                (int)_ridgeLength.Value);
             layout = MapConceptGenerator.Generate(parameters.Value);
         }
         else layout = MapConceptLayout.CreateDefault();
@@ -245,10 +303,13 @@ public partial class MapConceptViewer : Node2D
             ? $"Seed {seed} | Coastline v{MapConceptGenerator.GeneratorVersion}\n" +
               $"Land: {MapConceptGenerator.LandPercent(layout):F1}% of map | " +
               $"offshore islands: {layout.Islets.Count}/{parameters.Value.OffshoreIslands}\n" +
-              "Branched land / ocean inlets. Inland rivers and POIs come later."
+              $"Mountains: {layout.MountainRidges.Count} (range " +
+              $"{parameters.Value.MinMountainRegions}–{parameters.Value.MaxMountainRegions}) | " +
+              $"Elevation: {MapConceptElevationGrid.Columns}×{MapConceptElevationGrid.Rows}\n" +
+              "Lakes, freshwater rivers, forests and settlements come later."
             : $"Authored preset Island 1 | Decorative seed {seed}\n" +
               "Original forests, mountains, roads and sites preserved.";
-        GD.Print($"[MAP2.0B] {(procedural ? "Procedural island" : "Authored preset")} seed {seed}; " +
+        GD.Print($"[MAP2.1] {(procedural ? "Procedural island" : "Authored preset")} seed {seed}; " +
             $"land {MapConceptGenerator.LandPercent(layout):F1}%; islets {layout.Islets.Count}.");
     }
 
