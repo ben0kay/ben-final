@@ -315,9 +315,9 @@ public partial class MapConceptArt : Node2D
     // =========================================================
     private void MakeLabels()
     {
-        AddMapLabel("GREYWAKE ISLANDS", new Vector2(-320, -495), 32,
+        AddMapLabel("ISLAND 1", new Vector2(-320, -495), 32,
             new Color(0.24f, 0.27f, 0.23f), 380);
-        AddMapLabel("THE OPEN SEA", new Vector2(515, 445), 19,
+        AddMapLabel("OCEAN 1", new Vector2(515, 445), 19,
             new Color(0.16f, 0.39f, 0.48f), 260);
         AddMapLabel("N", new Vector2(713, -481), 24, Ink, 48);
         AddMapLabel("E", new Vector2(789, -417), 18, Ink, 48);

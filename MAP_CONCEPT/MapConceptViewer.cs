@@ -34,7 +34,7 @@ public partial class MapConceptViewer : Node2D
         _labels.Toggled += OnLabelsToggled;
         _camera.MakeCurrent();
         ResetView();
-        _status.Text = "Layout: Greywake v1 | Scatter seed: 147\nAuthor-defined coastline, regions and sites.";
+        _status.Text = "Layout: Island 1 | Scatter seed: 147\nGeography fixed for now; numbered landmarks.";
     }
 
     // =========================================================
@@ -123,7 +123,7 @@ public partial class MapConceptViewer : Node2D
     {
         int seed = Mathf.Clamp((int)_seedField.Value, 0, 999999);
         _art.RegenerateScatter(seed);
-        _status.Text = $"Layout: Greywake v1 | Scatter seed: {seed}\n" +
+        _status.Text = $"Layout: Island 1 | Scatter seed: {seed}\n" +
             "Coast, zone shapes, rivers and sites remain fixed.";
     }
 
