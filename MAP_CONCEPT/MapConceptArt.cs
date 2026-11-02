@@ -9,6 +9,7 @@ public partial class MapConceptArt : Node2D
     public int ScatterSeed { get; private set; } = 147;
 
     private readonly List<Label> _mapLabels = new();
+    private bool _labelsVisible = true;
     private static readonly Color Water = new(0.54f, 0.76f, 0.81f);
     private static readonly Color WaterInk = new(0.21f, 0.51f, 0.59f, 0.42f);
     private static readonly Color Parchment = new(0.85f, 0.84f, 0.68f);
@@ -32,8 +33,26 @@ public partial class MapConceptArt : Node2D
     }
 
     // =========================================================
+    // Regenerate the label nodes only when changing maps, not while panning.
+    public void SetMapLayout(MapConceptLayout layout, int decorationSeed)
+    {
+        Layout = layout;
+        ScatterSeed = decorationSeed;
+        foreach (Label label in _mapLabels)
+        {
+            RemoveChild(label);
+            label.QueueFree();
+        }
+        _mapLabels.Clear();
+        MakeLabels();
+        SetLabelsVisible(_labelsVisible);
+        QueueRedraw();
+    }
+
+    // =========================================================
     public void SetLabelsVisible(bool show)
     {
+        _labelsVisible = show;
         foreach (Label label in _mapLabels) label.Visible = show;
     }
 
@@ -315,7 +334,8 @@ public partial class MapConceptArt : Node2D
     // =========================================================
     private void MakeLabels()
     {
-        AddMapLabel("ISLAND 1", new Vector2(-320, -495), 32,
+        AddMapLabel(Layout.IsProcedural ? "ISLAND CONCEPT" : "ISLAND 1",
+            new Vector2(-320, -495), 32,
             new Color(0.24f, 0.27f, 0.23f), 380);
         AddMapLabel("OCEAN 1", new Vector2(515, 445), 19,
             new Color(0.16f, 0.39f, 0.48f), 260);

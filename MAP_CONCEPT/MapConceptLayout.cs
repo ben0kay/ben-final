@@ -40,7 +40,14 @@ public sealed class MapConceptLayout
     public readonly List<ConceptSite> Sites = new();
     public readonly List<ConceptRoute> Routes = new();
 
+    public bool IsProcedural { get; private set; }
     private MapConceptLayout(Vector2[] coast) => Coast = coast;
+
+    // =========================================================
+    // MAP2.0 generates coastlines only; biomes, rivers and POIs will be
+    // regenerated in later phases instead of inheriting misplaced preset sites.
+    public static MapConceptLayout CreateProcedural(Vector2[] coast) =>
+        new(coast) { IsProcedural = true };
 
     // =========================================================
     // Both pine and mixed forest use Forest numbers; both towns and harbours
@@ -139,12 +146,23 @@ public sealed class MapConceptLayout
 
     // =========================================================
     // Layout export: raw, editable coordinate polygons + stable IDs, not an inferred terrain heightmap.
-    public string BlueprintJson(int scatterSeed)
+    public string BlueprintJson(long worldSeed, MapConceptParameters? settings = null)
     {
         static float[][] Coords(Vector2[] points) => points.Select(p => new[] { p.X, p.Y }).ToArray();
+        var parameters = settings?.Validated();
         var data = new
         {
-            schema = 2, id = "island-concept-v1", scatter_seed = scatterSeed,
+            schema = 3, id = "island-concept-v1",
+            layout_mode = IsProcedural ? "procedural_coastline" : "authored_preset",
+            world_seed = worldSeed.ToString(CultureInfo.InvariantCulture),
+            generator_version = IsProcedural ? MapConceptGenerator.GeneratorVersion : 0,
+            generation_settings = parameters.HasValue ? new
+            {
+                land_coverage = parameters.Value.LandCoverage,
+                coastline_roughness = parameters.Value.CoastRoughness,
+                bays_and_peninsulas = parameters.Value.BaysAndPeninsulas,
+                offshore_islands_requested = parameters.Value.OffshoreIslands
+            } : null,
             map_units = new { width = MapWidth, height = MapHeight, metres_per_unit = MetresPerUnit },
             coordinate_convention = "X east, Y south (maps to world Z); map zero at island centre",
             coastline = Coords(Coast),

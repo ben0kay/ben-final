@@ -1,10 +1,12 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://MAP_CONCEPT/MapConceptViewer.cs" id="1"]
 [ext_resource type="Script" path="res://MAP_CONCEPT/MapConceptArt.cs" id="2"]
+[ext_resource type="Resource" path="res://MAP_CONCEPT/Configuration/MapConceptMaster.tres" id="3"]
 
 [node name="Scene_MapConcept" type="Node2D"]
 script = ExtResource("1")
+Settings = ExtResource("3")
 
 [node name="MapArtwork" type="Node2D" parent="."]
 script = ExtResource("2")
@@ -18,77 +20,140 @@ zoom = Vector2(0.9, 0.9)
 [node name="SidePanel" type="PanelContainer" parent="UI"]
 offset_left = 16.0
 offset_top = 16.0
-offset_right = 348.0
-offset_bottom = 438.0
+offset_right = 350.0
+offset_bottom = 762.0
 mouse_filter = 0
 
-[node name="Contents" type="VBoxContainer" parent="UI/SidePanel"]
+[node name="PanelScroll" type="ScrollContainer" parent="UI/SidePanel"]
 layout_mode = 2
-theme_override_constants/separation = 10
+size_flags_horizontal = 3
+size_flags_vertical = 3
+follow_focus = true
 
-[node name="Header" type="Label" parent="UI/SidePanel/Contents"]
+[node name="Contents" type="VBoxContainer" parent="UI/SidePanel/PanelScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 9
+
+[node name="Header" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 text = "BEN FINAL   /   MAP CONCEPT"
 theme_override_font_sizes/font_size = 21
 
-[node name="Subheading" type="Label" parent="UI/SidePanel/Contents"]
+[node name="Subheading" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "ISLAND 1  —  BLUEPRINT V1"
+text = "BW-MAP2.0  —  COASTLINE GENERATOR"
 theme_override_font_sizes/font_size = 14
 
-[node name="Description" type="Label" parent="UI/SidePanel/Contents"]
+[node name="Description" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 autowrap_mode = 3
-text = "Independent 2D island concept. All major geography and site coordinates are authored; only small detail is scattered from a seed."
+text = "Design different island coastlines from a seed. Forests, mountains and POIs will follow in later passes."
 
-[node name="Navigation" type="Label" parent="UI/SidePanel/Contents"]
+[node name="Navigation" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 autowrap_mode = 3
-text = "WHEEL: zoom under cursor\nLEFT / MIDDLE DRAG: pan\nR: reset view    L: labels"
+text = "WHEEL: zoom   DRAG: pan\nR: reset view   L: labels"
 theme_override_font_sizes/font_size = 13
 
-[node name="SeedLabel" type="Label" parent="UI/SidePanel/Contents"]
+[node name="ModeLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "Decorative scatter seed"
+text = "Map source"
 
-[node name="ScatterSeed" type="SpinBox" parent="UI/SidePanel/Contents"]
+[node name="MapMode" type="OptionButton" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-min_value = 0.0
-max_value = 999999.0
+
+[node name="SeedLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "World seed (signed 64-bit integer)"
+
+[node name="WorldSeed" type="LineEdit" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "254279584798"
+placeholder_text = "Enter a 64-bit whole number"
+max_length = 20
+select_all_on_focus = true
+
+[node name="RandomSeedButton" type="Button" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "Random seed and regenerate"
+
+[node name="CoverageLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "Landmass size target: 60%"
+
+[node name="CoverageSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 35.0
+max_value = 75.0
 step = 1.0
-value = 147.0
+value = 60.0
 
-[node name="RebuildButton" type="Button" parent="UI/SidePanel/Contents"]
+[node name="RoughnessLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "Rescatter illustrated trees + detail"
+text = "Coastline roughness: 45%"
 
-[node name="ShowLabels" type="CheckBox" parent="UI/SidePanel/Contents"]
+[node name="RoughnessSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100.0
+step = 1.0
+value = 45.0
+
+[node name="PeninsulaLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "Bays and peninsulas: 55%"
+
+[node name="PeninsulaSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100.0
+step = 1.0
+value = 55.0
+
+[node name="IsletsLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "Offshore islands requested: 2"
+
+[node name="IsletsSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 8.0
+step = 1.0
+value = 2.0
+
+[node name="RebuildButton" type="Button" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "Generate island from seed"
+
+[node name="ShowLabels" type="CheckBox" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 button_pressed = true
-text = "Show region and site labels"
+text = "Show map labels"
 
-[node name="ResetViewButton" type="Button" parent="UI/SidePanel/Contents"]
+[node name="ResetViewButton" type="Button" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 text = "Reset map view"
 
-[node name="ExportButton" type="Button" parent="UI/SidePanel/Contents"]
+[node name="ExportButton" type="Button" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 text = "Export map blueprint JSON"
 
-[node name="Status" type="Label" parent="UI/SidePanel/Contents"]
+[node name="Status" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 autowrap_mode = 3
 theme_override_font_sizes/font_size = 12
-text = "Preparing map concept..."
+text = "Preparing island..."
 
 [node name="BottomNote" type="Label" parent="UI"]
-offset_left = 19.0
 anchor_top = 1.0
 anchor_bottom = 1.0
+offset_left = 19.0
 offset_top = -42.0
-offset_right = 1050.0
+offset_right = 1100.0
 offset_bottom = -14.0
 mouse_filter = 2
-text = "MAP CONCEPT ONLY   •   No terrain meshes or streaming   •   Locations / names are placeholders"
+text = "MAP2.0  •  COASTLINE ONLY  •  No terrain meshes / streaming  •  Authored preset preserved"
 theme_override_colors/font_color = Color(0.14, 0.29, 0.30, 1)
 theme_override_font_sizes/font_size = 14

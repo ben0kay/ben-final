@@ -105,15 +105,16 @@ For example, a zombie's identity, health, senses, movement state, attacks, leade
 
 **Do not rush these systems into Ben Final now.** First validate **BW-W4.0**, build and test real **BW-W4.1 terrain streaming**, then disposable tree/grass/prop/dummy-entity stress tests and later LOD. Only after the streaming performance gate is accepted should War Machine components be reviewed **one system at a time**. The deep survival/sandbox/modding vision guides API boundaries and data ownership today; it does **not** authorize speculative gameplay rewrites, premature mod loaders or new permanent models.
 
-## Map-first island concept experiment (IMPLEMENTED IN SOURCE; AWAITING GODOT TEST)
+## Map-first island concept — BW-MAP1 and BW-MAP2.0
 
-A new **independent 2D cartography preview** lives in [MAP_CONCEPT/Scene_MapConcept.tscn](MAP_CONCEPT/Scene_MapConcept.tscn). Open it in Godot and press **F6**; it is entirely separate from `SCENE/Scene_World.tscn` and does not modify the current marching-cubes generator, benchmark, player or gameplay.
+An **independent F6 island-map scene** lives at [MAP_CONCEPT/Scene_MapConcept.tscn](MAP_CONCEPT/Scene_MapConcept.tscn). It is deliberately separate from 3D terrain generation, gameplay, streaming and War Machine.
 
-It presents a provisional **Island 1** hand-authored outline with offshore islets, forest/mountain/meadow/wetland polygons, rivers, roads and **numbered categories** instead of fictional place names (e.g., Forest 1, Mountains 2, Town 1, Ruin 2, Airstrip 1). Stylized vector mountains, illustrated trees, coastal strokes, sea markings, labels, compass and scale reference are rendered from those definitions. Zoom with the **mouse wheel**, pan with **left/middle/right drag**, press **R** to recenter, **L** to toggle labels, or use the on-screen controls. A numeric scatter seed changes tree/terrain **decoration only**; the coastline and authored sites do not randomly jump around.
+- **Authored Preset (MAP1):** Preserves the owner-viewed Island 1 with numbered mountains, forests, towns, roads, rivers and POIs.
+- **Procedural Seed (MAP2.0; implemented in source, awaiting Godot test):** Generates a different connected main-island coastline and optional offshore islands using FastNoiseLite and **full-length 64-bit seeds**. F6 has a Random Seed button plus sliders for landmass size, coastline roughness, bays/peninsulas and offshore-island count. Repeat seed/settings/version for the same coastline.
+- **Scope:** MAP2.0 intentionally generates *only land/ocean polygons*. The future seed-driven forests, mountains, lakes, towns/cities, rivers, roads and other POIs are **not yet generated**; the old authored markers are hidden in procedural mode rather than being misplaced.
+- **Export:** JSON schema 3 stores the current coastline/islets, exact seed string, generator version and settings for eventual 2D-to-3D translation. This is **not a heightmap or 3D terrain import**.
 
-**Future world-layout workflow:** The intended final seed will eventually generate **entirely different coherent island outlines, mountains, forests, rivers, lakes and landmark placements** (not only decorative tree scatter). Today the seed still changes *decoration only*; macro-layout generation is a planned, separate milestone. Category-number IDs (e.g., `forest_001`, `town_002`) are intended to make seeded layouts easier to identify without fictional names. Iterate with AI on the current authoring coordinates in `MAP_CONCEPT/MapConceptLayout.cs`, inspect the revised scene, then use **Export map blueprint JSON** (to Godot's `user://map_concept_layout.json`) to preserve the chosen coastline, region polygons, river/road paths, site IDs and map-unit scale hint. The blueprint is **not** a true heightmap, detailed navigable terrain, an editor paint tool, or a 3D generator. When the owner approves the layout, a **separately authorized** 2D-to-3D integration can use its data to constrain land elevation, coastlines, waterways, biome placement and site clearances. The initial coordinate scale is illustrative; the final island size remains a design decision. Full guide: [MAP_CONCEPT/README.md](MAP_CONCEPT/README.md).
-
-**Scope:** This is a concept-authoring side experiment. **BW-W4.1 streaming and disposable load tests remain the required performance gate before War Machine gameplay imports.** No streaming/terrain integration has been performed.
+The future goal remains a large variety of attractive, geographically coherent islands with variable numbers of forests, mountains, lakes, towns and cities. More: [MAP_CONCEPT/README.md](MAP_CONCEPT/README.md).
 
 ## Core development approach: independent scenes
 
@@ -123,7 +124,7 @@ Build each subsystem in its own scene and test environment; bring them together 
 | --- | --- | --- |
 | **SCENE/Scene_Player.tscn** | Arrow-key FPS, inverted mouse look, RMB jump and right-Ctrl crouch | Instances reusable PLAYER/Player.tscn; graybox with collision (awaiting validation) |
 | **SCENE/Scene_World.tscn** | Static world test with validated 1–100 NxN chunks, F1 seed + 7 geography sliders, regeneration and fly camera | Instances WORLD/World.tscn; no Player required; new panel/landforms await validation |
-| **MAP_CONCEPT/Scene_MapConcept.tscn** | Authored top-down island map for zoom/pan inspection, deterministic decorative scatter and JSON blueprint export | Independent C# Node2D scene; **implemented in source, awaits Godot validation** |
+| **MAP_CONCEPT/Scene_MapConcept.tscn** | Authored preset or seed-generated coastlines, zoom/pan and versioned JSON export | Independent C# Node2D scene; **MAP2.0 awaiting Godot validation** |
 | **SCENE/Scene_Buildings.tscn** | Buildings, interiors, doors, props, stairs, basements, collision | Building scenes and test ground |
 | **SCENE/Scene_AI.tscn** | Pathfinding, perception, investigation, combat and NPC simulation | AI actors, simple target/player stand-in, test geometry |
 | **SCENE/Scene_Game.tscn** | Eventually integrate the island, player, authored sites, gathering/crafting and escape objective | Only systems ready for integration; **planned** |
@@ -152,7 +153,9 @@ ben-final/
 │   ├── Scene_MapConcept.tscn   [created — F6 zoom/pan illustrated map]
 │   ├── MapConceptLayout.cs     [created — authored coast/regions/routes/sites]
 │   ├── MapConceptArt.cs        [created — illustrative drawing]
-│   └── MapConceptViewer.cs     [created — navigation and export]
+│   ├── MapConceptViewer.cs     [created — seed controls, navigation and export]
+│   ├── MapConceptGenerator.cs  [created — FastNoiseLite coastlines]
+│   └── Configuration/          [created — MapConceptMaster.tres defaults]
 ├── PLAYER/                     [created]
 │   ├── README.md                [created]
 │   ├── Player.tscn              [created]
@@ -263,7 +266,7 @@ These are **ownership concepts**, not nodes that must be created on day one. Kee
 - **[WORLD/README.md](WORLD/README.md)** — WORLD ownership, FPS-independent test controls, mesh-step/collision settings and the BW-W1 performance comparison procedure.
 - **[PLAYER/README.md](PLAYER/README.md)** — standalone player/FPS architecture and test-scene isolation.
 - **[SCENE/README.md](SCENE/README.md)** — independent test-scene ownership, F6 and F1 regeneration controls.
-- **[MAP_CONCEPT/README.md](MAP_CONCEPT/README.md)** — independent authored island blueprint, map viewer navigation, deterministic decorative scatter and JSON export.
+- **[MAP_CONCEPT/README.md](MAP_CONCEPT/README.md)** — both map modes, seeded coastline sliders, authoring boundaries and versioned JSON export.
 - **[ASSETS/README.md](ASSETS/README.md)** — imported model, texture and audio organization; source versus reusable scene prefabs.
 
 The terrain vision is **a coherent finite island**: varied coastline and ocean, accessible lowlands, forest/grass/fern zones, hills and mountain silhouettes, with deliberate clearings and authored points of interest. Marching cubes creates surfaces; separate geography, biome, water, vegetation and site-authoring systems create the world. The existing world authoring file is a technical reference; the island vision and gameplay goal in this root README take precedence if older exploratory ambitions conflict.
@@ -277,7 +280,8 @@ The terrain vision is **a coherent finite island**: varied coastline and ocean, 
 | **BW-W2** | Adjacent chunk generation | Static centre-out NxN grid (1–100 chunks per side) with F1 validated world-size input and safe regeneration; seam checks pending | **Awaiting Validation** |
 | **BW-W3A** | Composed geography | Original pass owner-tested (too flat + wall of spikes). New broad rolling hill masses, mountain coverage mask and seven shaping sliders implemented | **Awaiting Validation** |
 | **BW-W3B** | True 3D caves and overhangs | Full volumetric density, vertical chunk ownership, cave entrances, editable terrain and basements | **Planned** |
-| **BW-MAP1** | Independent illustrated island blueprint | Zoomable/pannable F6 2D scene, authored coast/regions/routes/sites, seed-scattered decoration and JSON blueprint export; no 3D terrain coupling | **Implemented in source — awaiting Godot validation** |
+| **BW-MAP1** | Independent illustrated island blueprint | Zoomable F6 authored preset with numbered regions/sites and JSON export | **Owner-viewed initial map; numbered label pass pending recheck** |
+| **BW-MAP2.0** | Seeded island coastline | 64-bit seed, FastNoiseLite, size/roughness/peninsula/islet sliders, random seed, preserved authored mode and schema-3 JSON | **Implemented in source — awaiting Godot validation** |
 | **BW-W4.0** | Streaming measurement baseline | F1 manual capture and fixed 60/180 m/s fly routes, frame-time histogram (median/P95/P99/worst), GC and terrain timing breakdown | **Implemented in source — awaiting Godot validation** |
 | **BW-W4** | Streaming and LOD | Camera-centred terrain residency, bounded load/unload queues, collision readiness, distance LOD and transitions; current preview still retains all generated chunks | **Planned — next priority** |
 | **BW-W4T** | Disposable streaming stress tests | Temporary trees/grass/ferns, props and dummy actors; repeatable fast-travel tests, frame-time/memory instrumentation and cleanup **before War Machine imports** | **Planned — gated on BW-W4 foundations** |

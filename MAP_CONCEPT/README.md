@@ -1,29 +1,47 @@
-# MAP_CONCEPT — Independent island map blueprint
+# MAP_CONCEPT — Seeded island cartography
 
-**Status: BW-MAP1 owner-tested visually in Godot (November 2, 2026); numbered-label pass awaits local rebuild/F6.** This is a **2D concept view** for designing and iterating on the future finite island, inspired loosely by illustrated fantasy maps. It does **not** generate terrain chunks, use Terrain3D, stream objects or change `SCENE/Scene_World.tscn`.
+**BW-MAP1:** The original numbered island concept was visually inspected by the owner in Godot. **BW-MAP2.0:** Seed-driven coastline generator implemented in source; Godot/.NET build and F6 appearance await local validation. This folder is isolated from 3D WORLD terrain, streaming and War Machine.
 
-## Open and navigate
+## Run and controls
 
-1. Pull the latest Ben Final `main`, allow Godot 4 .NET to build the C# project, then open **`res://MAP_CONCEPT/Scene_MapConcept.tscn`**.
-2. Press **F6** to run only the map concept. Mouse **wheel** zooms around the cursor, **left/middle/right drag** pans, **R** recentres, and **L** toggles labels.
-3. In the upper-left panel, set **Decorative scatter seed** and press **Rescatter**. This changes individual illustrated trees and ground markings but **does not regenerate/relocate the designed coastline, forests, routes, settlements or airstrip**.
-4. Press **Export map blueprint JSON** to write the draft coordinate data to `user://map_concept_layout.json`. Godot Output and the panel show its resolved local location. The export is a working blueprint, **not a mesh, raster image or Godot resource imported by WORLD**. The numbered-feature update uses **JSON schema 2** with explicit `category`, `number`, `kind`, and stable ID fields; previously exported schema-1 drafts should not be treated as current layout data.
+Open `res://MAP_CONCEPT/Scene_MapConcept.tscn` in Godot 4 .NET and press **F6**.
 
-The UI, rendering and data are independently owned: `MapConceptLayout.cs` contains **authored land polygons, numbered region categories, numbered site coordinates/IDs, rivers and roads**; `MapConceptArt.cs` renders a simplified illustrative map using CanvasItem drawing; `MapConceptViewer.cs` owns interaction and export; `Scene_MapConcept.tscn` instantiates those scripts. No assets, player, 3D world, shaders or external map addon is required.
+- **Map source:** Select **Procedural Seed** (default) or **Authored Preset (Island 1)**. The original Island 1 retains its numbered forests/mountains/towns/roads; it is never overwritten.
+- **World seed:** Enter any valid signed 64-bit integer, including `254279584798` or `4594759834789`, in the **text field** and press Enter or **Generate island from seed**. Random Seed generates a new long seed and redraws.
+- **Landmass size target:** 35–75%, approximate relative control. The status panel shows the *actual polygon-area fraction*; large peninsulas and the map-edge safety margin can make it differ from the target.
+- **Coastline roughness:** 0–100% adjusts broad/detail noise.
+- **Bays and peninsulas:** 0–100% adjusts macro lobes and warp.
+- **Offshore islands:** Request 0–8. The bounded placement algorithm may produce fewer if the available sea has insufficient clearance; the status displays actual/requested.
+- **Mouse wheel** zooms under cursor; **left/middle/right drag** pans; **R** resets; **L** toggles labels. Scroll the side panel to see all controls.
+- **Export map blueprint JSON** writes the currently displayed layout and its settings to `user://map_concept_layout.json`; the panel displays the OS path.
 
-## Authoring principles
+**Procedural mode generates coastline only.** Forests, mountains, rivers, lakes, roads, settlements and other POIs are intentionally *absent* until MAP2.1–2.3, not carried over from the authored preset. Changing seeds in **Authored Preset** affects only decorative marks, not geography.
 
-- **Map first; procedural detail second.** Change coastline/forest/highland/settlement and river/road coordinates in `MapConceptLayout.CreateDefault()` while iterating with the owner. Current categories use automatic **type + number** names such as **Forest 1–4**, **Mountains 1–3**, **Town 1–2**, **Ruin 1–2**, **Outpost 1**, **Airstrip 1**, **Meadow 1** and **Wetlands 1**. The original fictional place names have been removed.
-- **Identity scheme:** each feature carries an explicit per-category number; both pine/mixed forest types share `Forest` numbering, and the village/harbour site subtypes share `Town` numbering. C# derives export IDs such as `forest_001`, `mountains_002`, `town_001`, `river_003` from the category and number, rather than positions or arbitrary names. Keep per-category numbers unique within a single generated layout. Adding categories such as **City 1, City 2, Lake 1, Lake 2** is a future content task: the current sketch has neither a city nor a lake. Do not mislabel a river as a lake.
-- **Future full-world generation:** the long-term **world seed should deterministically generate the whole map**—island outline, mountain and forest region shapes/positions, coastlines, river/lake systems, and settlements—not just scatter decoration. The same seed and generator version must reproduce the same map; different seeds should produce significantly different, coherent, navigable island compositions. Preserve recognizable region types and stable **per-layout** feature IDs even as counts and coordinates vary between seeds. This requires separate design/validation work (e.g., sensible river drainage, beaches, town access, escape-site viability), and is **NOT yet implemented**. The current seed deliberately still affects decorative details only.
-- Use illustrated **2D map units** as drafting coordinates, with **X east, Y south**. Exported coordinates map to future Godot world **X and Z** respectively. `MetresPerUnit=4` is merely a provisional scale hint (1600 × 1080 art units ≈6.4 × 4.32 km); **not yet the approved island's playable dimensions**.
-- **Current versus future seeds:** for now, the seed only decorates tree drawings and ground marks. In the later seeded-world phase it should generate the macro geography and landmarks too. Do not claim seed-wide land generation until that separate phase is implemented and verified.
-- The `regions` outline polygons identify **intended types and density hints**, not exact biomes/elevations. They have no pathfinding, true geography, 3D carving, interpolation or terrain heights yet. Forest and mountain icons are illustrations, not separate source meshes/vegetation instances.
-- Future integration should use a separately approved map importer/translator that interprets the **raw blueprint** (not art pixels) into island masks, elevation constraints, coast/water, biome/foliage rules and reserved/leveled building footprints. Consider terrain chunks, streaming budgets and stable world coordinates at that stage, **not during BW-MAP1**.
-- Simple C# source authoring is the current edit workflow. A full in-editor paint/move/delete UI, multiple named map variants, SVG/PNG export and raster heightmap layers are **possible follow-ups**, not current features.
+## Ownership and generation
 
-## Visual acceptance checklist (Godot required)
+| File | Role |
+| --- | --- |
+| `Scene_MapConcept.tscn` | Independent F6 2D viewer; scrollable slider UI |
+| `Configuration/MapConceptSettings.cs` and `Configuration/MapConceptMaster.tres` | Validated defaults for seed/shape controls |
+| `MapConceptGenerator.cs` | FastNoiseLite noise layers, full-seed-derived streams, island contour and bounded offshore-island placement |
+| `MapConceptLayout.cs` | Original authored preset, generated-coastline factory, stable numbered feature IDs and JSON export |
+| `MapConceptArt.cs` | Procedural/artwork rendering and reusable labels |
+| `MapConceptViewer.cs` | 64-bit seed input, mode selection, sliders, navigation and export |
 
-Opening the scene with F6 should show an island, coastline and surrounding sea, offshore islands, broad forests and mountain ranges, rivers and roads, **numbered** regions and sites, a compass rose and labels. Scroll and pan over coast boundaries; verify no input freezes, labels toggle and reset recentres. Change the seed and confirm only decoration changes. Export twice at the same seed and verify identical JSON. Switch back to `SCENE/Scene_World.tscn` and confirm its C# terrain benchmark still runs independently.
+The generator uses full-length signed `long` seed values. A deterministic SplitMix64 stream derives **32-bit FastNoiseLite sub-seeds** and shape parameters, avoiding seed truncation. A radial contour with positive radius and monotonically ordered angles ensures **one connected, non-self-intersecting main island**. The shore is kept inside an inset rectangular safe zone. Fine coastline noise, macro bays and island rotation/axis ratio provide variety. Offshore islands are small bounded polygons, placed outside the coast with minimum clearance from mainland and from other islands.
 
-**Implementation verification:** The owner provided a Godot screenshot of the first running map view; the map appeared with forests, mountains, roads, rivers, site labels and UI. This new numbered-label/ID revision is source-checked only; no local Godot build or F6 verification was performed by the implementing agent. Existing JSON exports with old fictional IDs are draft files, not a production save format.
+This deliberately constrained first algorithm is *star-shaped*; extreme fjords, true archipelagos, more elaborate coastline erosion, hydrology and geographically valid biome/city placement are subsequent experiments. Slider percentages are not mathematical guarantees of visual quality. Regeneration is on-demand (not per-frame), and no procedural resources are built while merely panning/zooming.
+
+## Export schema and future terrain
+
+Schema **3** includes `layout_mode`, exact `world_seed` **as a string**, `generator_version`, `generation_settings`, `coastline`, `islets`, and existing `regions`, `routes`, `sites` lists (empty for the current procedural mode). Older schema-1/2 files are drafts. The coordinates remain **2D illustrative units** (X east, Y south; eventual world Z). The existing 4-metres-per-unit hint is **not** an approved playable island size. Do not mistake these polygons for a terrain heightmap or streamed 3D chunks.
+
+## Owner's F6 check
+
+1. With identical sliders, generate `254279584798` and `4594759834789`; verify significantly different coastlines and intact sea.
+2. Regenerate each seed twice; the coastline/islets should match exactly. Change each slider and check that land stays inside the border.
+3. Switch to **Authored Preset**; verify its original numbered forests, mountains, towns, routes and icons remain intact. Switch back and check procedural re-generation.
+4. Export at the same seed/settings twice; JSON should match, and its exact seed string and generator version should be present. Check mouse panning, zoom, labels, panel scrolling.
+5. Confirm `SCENE/Scene_World.tscn` remains unchanged.
+
+**Verification:** Source and scene-reference checks only by the implementing agent; no Godot or .NET runtime was available. The owner's earlier screenshot establishes MAP1's visible scene, not MAP2.0's visual quality.
