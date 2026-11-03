@@ -32,7 +32,10 @@ public sealed class MapConceptLayout
     // Illustrator units are not terrain vertices; future translation may rescale them.
     public const float MapWidth = 1600f;
     public const float MapHeight = 1080f;
-    public const float MetresPerUnit = 4f; // proposed 6.4 km x 4.32 km document, not actual world size.
+    // 1600 map units span the 12-km master-square width; 1080 units are
+    // the current illustrated frame inside that larger authoring canvas.
+    public const float MetresPerUnit = MapConceptMasterElevation.WorldMetres /
+        MapConceptMasterElevation.CanvasUnits;
 
     public readonly Vector2[] Coast;
     public readonly List<Vector2[]> Islets = new();
@@ -41,6 +44,7 @@ public sealed class MapConceptLayout
     public readonly List<ConceptRoute> Routes = new();
     public readonly List<ConceptMountainRidge> MountainRidges = new();
     public MapConceptElevationGrid? Elevation { get; internal set; }
+    public MapConceptMasterElevation? MasterElevation { get; internal set; }
 
     public bool IsProcedural { get; private set; }
     private MapConceptLayout(Vector2[] coast) => Coast = coast;
@@ -154,7 +158,7 @@ public sealed class MapConceptLayout
         var parameters = settings?.Validated();
         var data = new
         {
-            schema = 5, id = "island-concept-v1",
+            schema = 6, id = "island-concept-v1",
             layout_mode = IsProcedural ? "procedural_coastline" : "authored_preset",
             world_seed = worldSeed.ToString(CultureInfo.InvariantCulture),
             generator_version = IsProcedural ? MapConceptGenerator.GeneratorVersion : 0,
@@ -188,8 +192,29 @@ public sealed class MapConceptLayout
             mountain_ridges = MountainRidges.Select(r => new
             {
                 id = r.Id, number = r.Number, half_width = r.HalfWidth,
-                strength = r.Strength, centreline = Coords(r.Centreline)
+                strength = r.Strength, centreline = Coords(r.Centreline),
+                local_detail_seed = r.DetailSeed.ToString(CultureInfo.InvariantCulture),
+                detail_bounds = new
+                {
+                    x = r.DetailBounds.Position.X, y = r.DetailBounds.Position.Y,
+                    width = r.DetailBounds.Size.X, height = r.DetailBounds.Size.Y
+                }
             }).ToArray(),
+            master_elevation = MasterElevation == null ? null : new
+            {
+                file = MapConceptMasterElevation.RawFile,
+                format = MapConceptMasterElevation.SampleFormat,
+                resolution = MapConceptMasterElevation.Resolution,
+                tile_size = MapConceptMasterElevation.TileSize,
+                origin = new[]
+                {
+                    MapConceptMasterElevation.Origin.X, MapConceptMasterElevation.Origin.Y
+                },
+                map_units_per_sample = MapConceptMasterElevation.Step,
+                world_metres_per_side = MapConceptMasterElevation.WorldMetres,
+                metres_per_sample = MapConceptMasterElevation.MetresPerSample,
+                sample_order = "row_major_top_to_bottom"
+            },
             regions = Regions.Select(z => new { id = z.Id, name = z.Name,
                 category = RegionCategory(z.Kind), number = z.Number, kind = z.Kind.ToString(),
                 density = z.Density, outline = Coords(z.Outline) }).ToArray(),

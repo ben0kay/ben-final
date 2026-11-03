@@ -25,6 +25,8 @@ internal sealed class MapConceptNaturalPainter
         DrawWater();
         DrawLand();
         DrawRegionColours();
+        if (Layout.MasterElevation?.ReliefTexture is ImageTexture relief)
+            Canvas.DrawTextureRect(relief, Layout.MasterElevation.MapRect, false);
         if (Layout.Elevation != null)
             new MapConceptElevationPainter(Canvas, Layout.Elevation).Draw();
         DrawGroundMarks();

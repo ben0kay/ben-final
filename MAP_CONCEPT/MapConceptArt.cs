@@ -30,6 +30,7 @@ public partial class MapConceptArt : Node2D
     // Regenerate the label nodes only when changing maps, not while panning.
     public void SetMapLayout(MapConceptLayout layout, int decorationSeed)
     {
+        if (!ReferenceEquals(Layout, layout)) Layout.MasterElevation?.Dispose();
         Layout = layout;
         ScatterSeed = decorationSeed;
         foreach (Label label in _mapLabels)

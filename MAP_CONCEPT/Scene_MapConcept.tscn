@@ -42,18 +42,18 @@ theme_override_font_sizes/font_size = 21
 
 [node name="Subheading" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "BW-MAP2.1  —  ISLAND + MOUNTAINS"
+text = "BW-MAP2.1B  —  4096 MASTER MAP"
 theme_override_font_sizes/font_size = 14
 
 [node name="Description" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 autowrap_mode = 3
-text = "Generate coastlines, mountain ranges and 2D elevations from a repeatable seed. Freshwater and settlements come later."
+text = "4096-square high-detail master map. Generate only on click, then zoom into ridges. Rivers, forests and settlements come later."
 
 [node name="Navigation" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 autowrap_mode = 3
-text = "WHEEL: zoom   DRAG: pan\nR: reset view   L: labels"
+text = "WHEEL: zoom deeply   DRAG: pan\nR: fit island   L: labels   Hide panel for space"
 theme_override_font_sizes/font_size = 13
 
 [node name="ModeLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
@@ -205,6 +205,12 @@ max_value = 100.0
 step = 1.0
 value = 55.0
 
+[node name="MasterMapInfo" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+autowrap_mode = 3
+text = "MASTER: 4096 × 4096  |  WORLD: 12 × 12 km\nSAMPLE: ~2.93 m  |  Detail generated on demand"
+theme_override_font_sizes/font_size = 12
+
 [node name="RebuildButton" type="Button" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 text = "Generate island from seed"
@@ -236,6 +242,13 @@ offset_top = -42.0
 offset_right = 1100.0
 offset_bottom = -14.0
 mouse_filter = 2
-text = "MAP2.1  •  COASTLINES + MOUNTAIN ELEVATION  •  No 3D terrain or streaming  •  Authored preset preserved"
+text = "MAP2.1B  •  4096² MASTER BLUEPRINT  •  12 km WORLD  •  No 3D terrain / streaming"
 theme_override_colors/font_color = Color(0.14, 0.29, 0.30, 1)
 theme_override_font_sizes/font_size = 14
+
+[node name="PanelToggle" type="Button" parent="UI"]
+offset_left = 365.0
+offset_top = 17.0
+offset_right = 486.0
+offset_bottom = 50.0
+text = "Hide settings"

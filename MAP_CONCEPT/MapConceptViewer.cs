@@ -22,10 +22,13 @@ public partial class MapConceptViewer : Node2D
     private HSlider _mountainMin = null!, _mountainMax = null!,
         _mountainCoverage = null!, _ruggedness = null!, _ridgeLength = null!;
     private Button _rebuild = null!, _randomSeed = null!, _reset = null!, _export = null!;
+    private Button _togglePanel = null!;
+    private PanelContainer _sidePanel = null!;
     private long _activeSeed;
     private MapConceptParameters? _activeParameters;
     private bool _dragging;
-    private const float MinZoom = 0.30f, MaxZoom = 3.2f;
+    // Generous local-detail zoom without recomputing the map while navigating.
+    private const float MinZoom = 0.18f, MaxZoom = 32f;
     private const string ControlRoot = "UI/SidePanel/PanelScroll/Contents/";
 
     #region Lifecycle
@@ -39,6 +42,8 @@ public partial class MapConceptViewer : Node2D
             return;
         }
         _camera = GetNode<Camera2D>("MapCamera");
+        _sidePanel = GetNode<PanelContainer>("UI/SidePanel");
+        _togglePanel = GetNode<Button>("UI/PanelToggle");
         _art = GetNode<MapConceptArt>("MapArtwork");
         _mode = GetNode<OptionButton>(ControlRoot + "MapMode");
         _seedField = GetNode<LineEdit>(ControlRoot + "WorldSeed");
@@ -94,6 +99,7 @@ public partial class MapConceptViewer : Node2D
         _randomSeed.Pressed += GenerateRandomSeed;
         _reset.Pressed += ResetView;
         _export.Pressed += ExportBlueprint;
+        _togglePanel.Pressed += TogglePanel;
         _labels.Toggled += OnLabelsToggled;
         _coverage.ValueChanged += UpdateSliderLabels;
         _roughness.ValueChanged += UpdateSliderLabels;
@@ -108,8 +114,8 @@ public partial class MapConceptViewer : Node2D
         _ridgeLength.ValueChanged += UpdateSliderLabels;
         UpdateSliderLabels(0);
         _camera.MakeCurrent();
-        ResetView();
         GenerateMap();
+        ResetView();
     }
 
     // =========================================================
@@ -121,6 +127,7 @@ public partial class MapConceptViewer : Node2D
         if (GodotObject.IsInstanceValid(_randomSeed)) _randomSeed.Pressed -= GenerateRandomSeed;
         if (GodotObject.IsInstanceValid(_reset)) _reset.Pressed -= ResetView;
         if (GodotObject.IsInstanceValid(_export)) _export.Pressed -= ExportBlueprint;
+        if (GodotObject.IsInstanceValid(_togglePanel)) _togglePanel.Pressed -= TogglePanel;
         if (GodotObject.IsInstanceValid(_labels)) _labels.Toggled -= OnLabelsToggled;
         if (GodotObject.IsInstanceValid(_coverage)) _coverage.ValueChanged -= UpdateSliderLabels;
         if (GodotObject.IsInstanceValid(_roughness)) _roughness.ValueChanged -= UpdateSliderLabels;
@@ -196,11 +203,43 @@ public partial class MapConceptViewer : Node2D
     private void ResetView()
     {
         Vector2 viewport = GetViewportRect().Size;
-        float scale = Mathf.Min(viewport.X / (MapConceptLayout.MapWidth + 110f),
-            viewport.Y / (MapConceptLayout.MapHeight + 100f));
-        scale = Mathf.Clamp(scale, MinZoom, 1.35f);
-        _camera.Zoom = new Vector2(scale, scale);
-        _camera.Position = Vector2.Zero;
+        // Only the right-hand drawing area counts when the settings panel is open.
+        float left = _sidePanel.Visible
+            ? _sidePanel.Position.X + _sidePanel.Size.X + 35f : 28f;
+        float right = viewport.X - 32f;
+        float availableWidth = Mathf.Max(220f, right - left);
+        float availableHeight = Mathf.Max(220f, viewport.Y - 90f);
+
+        // Frame the *actual island*, including islets, rather than empty ocean.
+        Vector2 min = new(float.MaxValue, float.MaxValue);
+        Vector2 max = new(float.MinValue, float.MinValue);
+        Include(_art.Layout.Coast);
+        foreach (Vector2[] island in _art.Layout.Islets) Include(island);
+        void Include(Vector2[] points)
+        {
+            foreach (Vector2 point in points)
+            {
+                min = min.Min(point);
+                max = max.Max(point);
+            }
+        }
+        Vector2 span = max - min;
+        float zoom = Mathf.Clamp(Mathf.Min(
+            availableWidth / Mathf.Max(200f, span.X * 1.12f),
+            availableHeight / Mathf.Max(180f, span.Y * 1.15f)), MinZoom, 2.5f);
+        _camera.Zoom = new Vector2(zoom, zoom);
+        Vector2 targetScreen = new(left + availableWidth * 0.5f, viewport.Y * 0.5f);
+        _camera.Position = (min + max) * 0.5f +
+            (viewport * 0.5f - targetScreen) / zoom;
+    }
+
+    // =========================================================
+    private void TogglePanel()
+    {
+        _sidePanel.Visible = !_sidePanel.Visible;
+        _togglePanel.Text = _sidePanel.Visible ? "Hide settings" : "Show settings";
+        _togglePanel.Position = new Vector2(_sidePanel.Visible ? 365f : 16f, 17f);
+        ResetView();
     }
     #endregion
 
@@ -305,11 +344,14 @@ public partial class MapConceptViewer : Node2D
               $"offshore islands: {layout.Islets.Count}/{parameters.Value.OffshoreIslands}\n" +
               $"Mountains: {layout.MountainRidges.Count} (range " +
               $"{parameters.Value.MinMountainRegions}–{parameters.Value.MaxMountainRegions}) | " +
-              $"Elevation: {MapConceptElevationGrid.Columns}×{MapConceptElevationGrid.Rows}\n" +
-              "Lakes, freshwater rivers, forests and settlements come later."
+              $"Master: {MapConceptMasterElevation.Resolution}×{MapConceptMasterElevation.Resolution}" +
+              $" / {MapConceptMasterElevation.WorldMetres / 1000f:0} km square\n" +
+              $"Master step: {MapConceptMasterElevation.MetresPerSample:F2} m | " +
+              $"Preview: {MapConceptElevationGrid.Columns}×{MapConceptElevationGrid.Rows}\n" +
+              "Full detail generated on button press; lakes/forests/settlements later."
             : $"Authored preset Island 1 | Decorative seed {seed}\n" +
               "Original forests, mountains, roads and sites preserved.";
-        GD.Print($"[MAP2.1] {(procedural ? "Procedural island" : "Authored preset")} seed {seed}; " +
+        GD.Print($"[MAP2.1B] {(procedural ? "Procedural island" : "Authored preset")} seed {seed}; " +
             $"land {MapConceptGenerator.LandPercent(layout):F1}%; islets {layout.Islets.Count}.");
     }
 
@@ -321,17 +363,31 @@ public partial class MapConceptViewer : Node2D
     private void ExportBlueprint()
     {
         const string path = "user://map_concept_layout.json";
+        MapConceptMasterElevation? master = _art.Layout.MasterElevation;
+        if (master != null)
+        {
+            string rawPath = "user://" + MapConceptMasterElevation.RawFile;
+            if (!master.SaveRaw(rawPath))
+            {
+                _status.Text = "Could not export 4096 master elevation. See Godot Output.";
+                GD.PushError("[MAP2.1B] Master R16 export failed: " + rawPath);
+                return;
+            }
+        }
+
         using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
         if (file == null)
         {
-            _status.Text = "Could not export blueprint to user://. See Godot Output.";
-            GD.PushWarning("[MAP2.0B] Could not open map blueprint export.");
+            _status.Text = "Could not export map blueprint JSON. See Godot Output.";
+            GD.PushWarning("[MAP2.1B] Could not open JSON export.");
             return;
         }
         file.StoreString(_art.Layout.BlueprintJson(_activeSeed, _activeParameters));
         file.Flush();
-        _status.Text = "Current map blueprint saved to:\n" + ProjectSettings.GlobalizePath(path);
-        GD.Print("[MAP2.0B] Exported blueprint: " + ProjectSettings.GlobalizePath(path));
+        _status.Text = "Blueprint saved:\n" + ProjectSettings.GlobalizePath(path) +
+            (master != null ? "\nMaster R16: " +
+                ProjectSettings.GlobalizePath("user://" + MapConceptMasterElevation.RawFile) : "");
+        GD.Print("[MAP2.1B] Exported map: " + ProjectSettings.GlobalizePath(path));
     }
     #endregion
 }

@@ -9,7 +9,8 @@
 | **BW-MAP1** | Numbered authored map preset, zoom/pan, illustration, JSON export | Owner viewed original; numbered pass implemented |
 | **BW-MAP2.0** | Seeded coastline foundation and basic controls | Owner tested; too many rounded coastlines |
 | **BW-MAP2.0B** | Composite landmasses, peninsulas, deep sea inlets, marching squares; modular `Generation/` and `Rendering/` | Implemented; owner reported map looks OK so far |
-| **BW-MAP2.1** | Seed-dependent mountain count/position, coherent inland ridges, foothills, lowland valleys, sampled elevation, contour illustration and export | **Implemented in source; C# build/F6 validation pending** |
+| **BW-MAP2.1** | Seed-dependent mountain count/position, coherent inland ridges, foothills, lowland valleys, sampled elevation, contour illustration and export | **Owner viewed F6 mountain map; tuning ongoing** |
+| **BW-MAP2.1B** | **4096×4096 master elevation** on a proposed 12×12 km square map, high-detail shaded-relief image, more usable framing/zoom, bounded mountain-local detail seeds, R16+JSON export | **Implemented in source; Godot C#/F6 validation pending** |
 | **BW-MAP2.2 — planned** | Inland lakes, freshwater drainage, downhill rivers, coastal estuaries; slope and sea-level checks |
 | **BW-MAP2.3 — planned** | Forest zones, meadows, wetlands and biome suitability from elevation/moisture |
 | **BW-MAP2.4 — planned** | Variable towns/cities/roads and numbered POIs, placement feasibility and connectivity |
@@ -24,6 +25,24 @@
 - Sampled `MapConceptElevationGrid` covers 129 × 89 positions in 2D map coordinates, storing normalized **16-bit** elevations, with zero denoting ocean. Lowlands and foothills are preserved even if min=max=0. It is a **concept field**, not a final metric heightmap.
 - Actual mountain symbols, region polygons and elevation contours visualize the *same* ridge/elevation data. Old authored map drawings and sites remain unchanged.
 - Blueprint schema **5** exports the full seed, control settings, ridge paths, numbered mountain regions and normalized height samples with grid origin/step. No terrain meshes, World generation, rivers, lakes, forests, towns, new gameplay or streaming are introduced.
+
+## MAP2.1B master-map contract
+
+- The **4096×4096 master raster** covers a **12×12 km** square conceptual world at roughly **2.93 m/sample**. It uses normalized `ushort` heights (32 MiB); the existing 129×89 field remains as the fast broad-shape/contour reference.
+- Preserve the previous **coastline and primary mountain ridge positions** for identical seed/settings; build the full-resolution heightmap **after** those layout decisions. Higher-frequency detail is sampled in continuous map coordinates (not indexed by screen pixels), so pan/zoom do not regenerate terrain.
+- Render the master through **one cached 4096² RGBA relief texture**, below existing mountain symbols. Allow up to **32× zoom** and fit the island within the free viewport to the right of the settings panel. The panel can collapse. No live slider recomputation, per-frame simulation, or continuous texture upload.
+- Individual ranges retain `mountains_NNN` IDs plus independent **local detail seeds and bounds**. Future local edits should target 256² tiles that intersect those bounded regions, retaining unrelated mountain geometry and coastline shape. Tile size is currently metadata, **not a completed tile regeneration/editing system**.
+- Blueprint **schema 6**, generator **version 4**. JSON records the 4096 master metadata and local ridge seeds, not the full 16M pixels. Explicit export also writes `user://map_concept_master_4096.r16`, little-endian row-major 16-bit normalized data (32 MiB). Raw binary export is not performed on every seed change.
+- The existing illustrated geometry still spans a centred 1600×1080-unit region inside the square 1600×1600-unit master canvas (7.5 m/unit). A bigger data canvas **does not itself increase the underlying island footprint**; framing changes make the island fill more of the viewport. Expanding the actual shoreline/world-area generator is a separate design decision.
+- Synchronous on-demand generation may pause the F6 viewer and temporarily allocate more than 100 MiB (heights + RGBA pixels + image/upload/export buffers). Watch real-generation duration on the owner's PC. Optimize or tile generation only if measurements warrant it.
+
+### MAP2.1B acceptance
+
+1. Open F6; confirm the displayed master is 4096² and the coastal layout/ridge placements match old seeds when settings match. Verify high-res shaded relief is visible at close zoom and no flat, rectangular opaque overlay covers the sea.
+2. Hide panel, press R, confirm the island occupies the available canvas. Show panel and repeat; mouse pan and wheel zoom should not regenerate or upload data.
+3. Verify same seed, mountain settings and generator version produce identical binary R16 output. Test different mountain local seeds later without altering coastline; **per-mountain reroll UI is not implemented yet**.
+4. Export schema-6 JSON plus the `4096²×2 = 33,554,432`-byte R16 file. Ensure metadata's coordinate origin, map span, sample format, height order, and relative path are correct.
+5. Switch to Authored Preset. Check unchanged landscapes/labels, no compile errors and no modifications to actual `WORLD/` runtime code.
 
 ## Validation checkpoints
 

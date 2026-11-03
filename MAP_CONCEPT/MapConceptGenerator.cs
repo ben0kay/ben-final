@@ -5,7 +5,7 @@ using Godot;
 
 public static class MapConceptGenerator
 {
-    public const int GeneratorVersion = 3;
+    public const int GeneratorVersion = 4;
     private const int MaxAttempts = 5;
 
     #region Generation
@@ -59,6 +59,7 @@ public static class MapConceptGenerator
         if (best != null)
         {
             MapConceptMountainGenerator.Populate(best, parameters);
+            MapConceptMasterGenerator.Populate(best, parameters.Seed);
             return best;
         }
         var safeCoast = new Vector2[96];
@@ -70,6 +71,7 @@ public static class MapConceptGenerator
         }
         var fallback = MapConceptLayout.CreateProcedural(safeCoast);
         MapConceptMountainGenerator.Populate(fallback, parameters);
+        MapConceptMasterGenerator.Populate(fallback, parameters.Seed);
         return fallback;
     }
 

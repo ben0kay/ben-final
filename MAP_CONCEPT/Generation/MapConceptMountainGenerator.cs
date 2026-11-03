@@ -52,7 +52,11 @@ internal static class MapConceptMountainGenerator
                 float width = rng.Range(31f, 61f) *
                     (0.70f + parameters.MountainCoverage / 100f * 1.25f);
                 float strength = rng.Range(0.80f, 0.99f);
-                chosen = new ConceptMountainRidge(number, spine, width, strength);
+                chosen = new ConceptMountainRidge(number, spine, width, strength)
+                {
+                    DetailSeed = unchecked(parameters.Seed ^
+                        (long)(0x6347A5B1E3D29C8FUL + (ulong)number * 0x9E3779B97F4A7C15UL))
+                };
                 break;
             }
 

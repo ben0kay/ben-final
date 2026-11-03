@@ -41,4 +41,17 @@ public sealed record ConceptMountainRidge(int Number, Vector2[] Centreline,
     float HalfWidth, float Strength)
 {
     public string Id => MapConceptLayout.FeatureId("Mountains", Number);
+    // Independent local-detail stream: later reroll this one region in its tiles.
+    public long DetailSeed { get; init; }
+    public Rect2 DetailBounds
+    {
+        get
+        {
+            Vector2 low = Centreline[0], high = Centreline[0];
+            foreach (Vector2 point in Centreline) { low = low.Min(point); high = high.Max(point); }
+            float margin = HalfWidth * 3f;
+            return new Rect2(low - new Vector2(margin, margin),
+                high - low + new Vector2(margin * 2f, margin * 2f));
+        }
+    }
 }

@@ -16,12 +16,15 @@ The owner is designing a future finite island **as 2D geography first**, before 
 
 - **BW-MAP1:** Numbered authored map preset with coastal features, mountains, forests, towns and candidate POIs.
 - **BW-MAP2.0 / MAP2.0B:** Full 64-bit seeded landmasses, branching peninsulas, deep ocean inlets and small islands, independently illustrated and exported. The owner confirmed MAP2.0B results looked OK so far; more visual polishing may follow.
-- **BW-MAP2.1 (source implemented; awaiting C# build/F6):** Deterministic inland mountain ridge paths, adjustable range count/coverage/ruggedness/length, named **Mountains 1...N** IDs, lowland/foothill/mountain **normalized 129×89 u16 elevation grid**, topographic drawing and **schema-5** blueprint export. Mountain-seed stream is separate from coastline generation; mountain sliders should not reshape the coast. This grid **is not yet actual metric terrain**.
+- **BW-MAP2.1 (owner-viewed in F6):** Inland mountain ridges, numbered **Mountains 1...N**, bounded count/coverage/ruggedness/length controls, lowland/foothill preview **129×89 normalized elevation**, illustrated contours. Ridges have their own independent seed stream; their sliders do not reshape the coast.
+- **BW-MAP2.1B (implemented in source; awaiting C# build/F6):** A separate **4096×4096 u16 master elevation** at proposed **12×12 km** (2.93 m/sample), deterministic high-frequency surface detail, one cached shaded-relief image, improved 32× viewer zoom, panel-aware camera framing, independent mountain-local detail seed/bounds metadata and **JSON schema 6 + separate 32 MiB R16 binary export**. The original coastline and ridge placement algorithms are preserved. No local mountain re-roll tools yet.
 - **MAP2.2 planned:** Inland lakes, freshwater rivers and drainage based on elevation, keeping saltwater inlets separate.
 - **MAP2.3 planned:** Forest/meadow/wetland and biome zone placement.
 - **MAP2.4 planned:** Variable seeded towns/cities, roads and POIs, validated for flat land and connectivity.
 - **MAP2.5 planned:** Quality validation of many seeds, controlled variation, debug/export polish.
 - **MAP3.0 planned:** Approve map coordinate scale/sea level/height interpretation and build a separate translator to actual WORLD procedural terrain **only after an explicit integration decision**.
+
+**Scale note:** The authoring master is square and 4096 pixels wide, but the current island outline is still authored in the original ~1600×1080 conceptual drawing area inside that master. Adopt no fixed 12-km island *diameter* or metric mountain height from this alone. The binary map is a proposal for later import, not connected to live 3D terrain.
 
 **Separation rule:** MAP_CONCEPT currently does **not** change the `WORLD/` marching-cubes terrain, 3D chunk meshes, loading/LOD, camera or gameplay. The existing BW-W4 streaming measurement and performance gates remain authoritative and independent. Before map-to-world integration, validate map masks, slope/sea levels, road clearances, world-space determinism and chunk-local queries; do not assume an illustrated region polygon is a physical 3D site. Full owned roadmap: [MAP_CONCEPT/IMPLEMENTATION_PLAN.md](../MAP_CONCEPT/IMPLEMENTATION_PLAN.md), and feature guide: [MAP_CONCEPT/README.md](../MAP_CONCEPT/README.md).
 
