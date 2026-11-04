@@ -26,7 +26,7 @@ public partial class MapConceptViewer : Node2D
     private HSlider _inlets = null!, _riverReach = null!, _riverWinding = null!,
         _tributaries = null!;
     private Button _rebuild = null!, _randomSeed = null!, _reset = null!, _export = null!;
-    private Button _togglePanel = null!;
+    private Button _togglePanel = null!, _randomAll = null!;
     private PanelContainer _sidePanel = null!;
     private long _activeSeed;
     private MapConceptParameters? _activeParameters;
@@ -85,6 +85,7 @@ public partial class MapConceptViewer : Node2D
         _tributariesText = GetNode<Label>(ControlRoot + "TributariesLabel");
         _rebuild = GetNode<Button>(ControlRoot + "RebuildButton");
         _randomSeed = GetNode<Button>(ControlRoot + "RandomSeedButton");
+        _randomAll = GetNode<Button>(ControlRoot + "RandomAllButton");
         _reset = GetNode<Button>(ControlRoot + "ResetViewButton");
         _export = GetNode<Button>(ControlRoot + "ExportButton");
 
@@ -113,6 +114,7 @@ public partial class MapConceptViewer : Node2D
         _seedField.TextSubmitted += OnSeedSubmitted;
         _rebuild.Pressed += GenerateMap;
         _randomSeed.Pressed += GenerateRandomSeed;
+        _randomAll.Pressed += GenerateRandomMap;
         _reset.Pressed += ResetView;
         _export.Pressed += ExportBlueprint;
         _togglePanel.Pressed += TogglePanel;
@@ -145,6 +147,7 @@ public partial class MapConceptViewer : Node2D
         if (GodotObject.IsInstanceValid(_seedField)) _seedField.TextSubmitted -= OnSeedSubmitted;
         if (GodotObject.IsInstanceValid(_rebuild)) _rebuild.Pressed -= GenerateMap;
         if (GodotObject.IsInstanceValid(_randomSeed)) _randomSeed.Pressed -= GenerateRandomSeed;
+        if (GodotObject.IsInstanceValid(_randomAll)) _randomAll.Pressed -= GenerateRandomMap;
         if (GodotObject.IsInstanceValid(_reset)) _reset.Pressed -= ResetView;
         if (GodotObject.IsInstanceValid(_export)) _export.Pressed -= ExportBlueprint;
         if (GodotObject.IsInstanceValid(_togglePanel)) _togglePanel.Pressed -= TogglePanel;
@@ -276,6 +279,7 @@ public partial class MapConceptViewer : Node2D
     private void OnModeSelected(long index)
     {
         bool procedural = _mode.GetSelectedId() == 0;
+        _randomAll.Disabled = !procedural;
         _coverage.Editable = procedural;
         _roughness.Editable = procedural;
         _peninsulas.Editable = procedural;
@@ -339,6 +343,29 @@ public partial class MapConceptViewer : Node2D
             .ToString(CultureInfo.InvariantCulture);
         GenerateMap();
     }
+
+    // =========================================================
+    // Randomize all geography controls once, then use the existing seed/generate
+    // action. Updating sliders must not trigger multiple 4096 master rebuilds.
+    private void GenerateRandomMap()
+    {
+        if (_mode.GetSelectedId() != 0) return;
+        foreach (HSlider slider in new[] { _coverage, _roughness, _peninsulas,
+            _islets, _complexity, _ocean, _mountainCoverage, _ruggedness,
+            _ridgeLength, _inlets, _riverReach, _riverWinding, _tributaries })
+            slider.SetValueNoSignal(RandomSliderValue(slider));
+
+        int a = RandomSliderValue(_mountainMin), b = RandomSliderValue(_mountainMax);
+        _mountainMin.SetValueNoSignal(Math.Min(a, b));
+        _mountainMax.SetValueNoSignal(Math.Max(a, b));
+        UpdateSliderLabels(0);
+        GenerateRandomSeed();
+    }
+
+    // =========================================================
+    // All generation sliders use integer steps; include both range endpoints.
+    private static int RandomSliderValue(HSlider slider) =>
+        Random.Shared.Next((int)slider.MinValue, (int)slider.MaxValue + 1);
 
     // =========================================================
     private void GenerateMap()

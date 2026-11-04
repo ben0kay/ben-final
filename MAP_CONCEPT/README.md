@@ -9,6 +9,8 @@ The roadmap and later lake/forest/town work are in [IMPLEMENTATION_PLAN.md](IMPL
 Open `res://MAP_CONCEPT/Scene_MapConcept.tscn`, build C# and press **F6**.
 
 - **Procedural Seed / Generate:** Builds land, connected water corridors, mountains and the 4096 master on demand. Sliders alone do not regenerate.
+- **Random seed (same settings):** Picks a new seed and generates with the current slider values.
+- **True random (seed + settings):** Randomizes the seed and all geography sliders within their displayed limits, keeps minimum mountains ≤ maximum mountains, then generates once. The resulting settings remain visible/editable and are included in export. Available in Procedural Seed mode; disabled for the authored preset.
 - **Authored Preset (Island 1):** Preserves the original numbered regions, routes and sites.
 - **Wheel / drag / R / L:** Cursor zoom up to 32×, pan, fit map and toggle labels. Hide settings provides more drawing room.
 - **Export:** Writes `user://map_concept_layout.json`, `map_concept_master_4096.r16` (32 MiB) and `map_concept_water_4096.r8` (16 MiB) for a procedural map.

@@ -76,7 +76,13 @@ select_all_on_focus = true
 
 [node name="RandomSeedButton" type="Button" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "Random seed and regenerate"
+text = "Random seed (same settings)"
+tooltip_text = "Choose a new seed and generate using the current settings."
+
+[node name="RandomAllButton" type="Button" parent="UI/SidePanel/PanelScroll/Contents"]
+layout_mode = 2
+text = "True random (seed + settings)"
+tooltip_text = "Randomize the seed and all geography settings, then generate once."
 
 [node name="CoverageLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
