@@ -16,6 +16,8 @@ internal static class MapConceptMountainGenerator
         var rng = new MapConceptSeedStream(unchecked((ulong)parameters.Seed) ^ RidgeSalt);
         int wanted = rng.NextInt(parameters.MinMountainRegions, parameters.MaxMountainRegions + 1);
         Rect2 bounds = MapConceptGeometry.Bounds(layout.Coast);
+        foreach (Vector2[] island in layout.Islets)
+            bounds = bounds.Merge(MapConceptGeometry.Bounds(island));
 
         for (int number = 1; number <= wanted; number++)
         {
@@ -24,7 +26,7 @@ internal static class MapConceptMountainGenerator
             {
                 Vector2 center = new(rng.Range(bounds.Position.X, bounds.End.X),
                     rng.Range(bounds.Position.Y, bounds.End.Y));
-                if (!layout.IsOnLand(center) || CoastDistance(center, layout.Coast) < 38f ||
+                if (!layout.IsOnLand(center) || layout.ShoreClearance(center) < 38f ||
                     TooCloseToExisting(center, layout.MountainRidges, 95f)) continue;
 
                 float angle = rng.Range(0f, Mathf.Tau);
@@ -44,11 +46,12 @@ internal static class MapConceptMountainGenerator
                         normal * (bend * Mathf.Sin(t * Mathf.Pi) +
                             waviness * Mathf.Sin(3f * Mathf.Pi * t));
                     spine[i] = p;
-                    if (layout.IsOnLand(p) && CoastDistance(p, layout.Coast) >= 10f) inland++;
+                    if (layout.ShoreClearance(p) >= 18f && (i == 0 ||
+                        layout.ShoreClearance(p.Lerp(spine[i - 1], 0.5f)) >= 18f)) inland++;
                 }
 
                 // Favour ranges that remain inland; no unbounded retries.
-                if (inland < 7) continue;
+                if (inland < spine.Length) continue;
                 float width = rng.Range(31f, 61f) *
                     (0.70f + parameters.MountainCoverage / 100f * 1.25f);
                 float strength = rng.Range(0.80f, 0.99f);
@@ -126,7 +129,7 @@ internal static class MapConceptMountainGenerator
 
             // Coastal lowlands taper to zero at sea level.
             float coastFactor = Mathf.SmoothStep(0f, 1f,
-                Mathf.Clamp(CoastDistance(point, layout.Coast) / 65f, 0f, 1f));
+                Mathf.Clamp(layout.ShoreClearance(point) / 65f, 0f, 1f));
             float baseHeight = (0.15f + plains.GetNoise2D(point.X, point.Y) * 0.075f) *
                 coastFactor;
             float mountainHeight = 0f;
@@ -156,16 +159,6 @@ internal static class MapConceptMountainGenerator
         float nearest = float.MaxValue;
         for (int i = 0; i < spine.Length - 1; i++)
             nearest = Mathf.Min(nearest, DistanceToSegment(point, spine[i], spine[i + 1]));
-        return nearest;
-    }
-
-    // =========================================================
-    private static float CoastDistance(Vector2 point, Vector2[] polygon)
-    {
-        float nearest = float.MaxValue;
-        for (int i = 0; i < polygon.Length; i++)
-            nearest = Mathf.Min(nearest,
-                DistanceToSegment(point, polygon[i], polygon[(i + 1) % polygon.Length]));
         return nearest;
     }
 

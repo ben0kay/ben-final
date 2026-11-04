@@ -25,7 +25,7 @@ internal static class MapConceptMasterGenerator
             RasterizeLand(master, island, map.Elevation, map.MountainRidges,
                 ridgeOwners, globalDetailSeed, crossings);
 
-        MapConceptWaterCarver.Apply(master, map);
+        MapConceptWaterCarver.Apply(master);
         master.ReliefTexture = MakeRelief(master.Heights, master.WaterMask);
         map.MasterElevation = master;
     }

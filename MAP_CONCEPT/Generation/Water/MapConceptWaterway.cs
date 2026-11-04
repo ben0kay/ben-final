@@ -1,7 +1,8 @@
-// BW-MAP2.2A: typed saltwater inlet and freshwater path records, not decorative strokes.
+// Typed coastal-corridor paths, shared junctions and termination metadata.
 using Godot;
 
 public enum ConceptWaterKind { OceanInlet, River, Tributary }
+public enum ConceptWaterEnding { None, ConnectedBasin, OppositeCoast, RejoinsChannel }
 
 public sealed record ConceptWaterway(ConceptWaterKind Kind, int Number,
     Vector2[] Points, float[] HalfWidths, float[] SurfaceLevels)
@@ -17,12 +18,18 @@ public sealed record ConceptWaterway(ConceptWaterKind Kind, int Number,
     {
         ConceptWaterKind.OceanInlet => $"Ocean Inlet {Number}",
         ConceptWaterKind.River => $"River {Number}",
-        _ => $"Tributary {Number}"
+        _ => CoastalChannel ? $"Channel Branch {Number}" : $"Tributary {Number}"
     };
+
+    // Coastal corridors cut the land field; they are all sea-level water and
+    // must never be repainted/carved as an independent freshwater stroke.
+    public bool CoastalChannel { get; init; }
+    public ConceptWaterEnding Ending { get; init; }
 
     // River -> ocean inlet and tributary -> main river links are explicit data.
     public string? ConnectedWaterwayId { get; init; }
+    public string? RejoinsWaterwayId { get; init; }
 
-    // Saltwater inlets store ocean -> inland; freshwater stores source -> mouth.
-    public Vector2 InlandEnd => Kind == ConceptWaterKind.OceanInlet ? Points[^1] : Points[0];
+    // Coastal paths store ocean -> inland; future freshwater uses source -> mouth.
+    public Vector2 InlandEnd => CoastalChannel || Kind == ConceptWaterKind.OceanInlet ? Points[^1] : Points[0];
 }

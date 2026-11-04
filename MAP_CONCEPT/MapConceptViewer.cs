@@ -326,9 +326,9 @@ public partial class MapConceptViewer : Node2D
         _ruggednessText.Text = $"Mountain ruggedness: {(int)_ruggedness.Value}%";
         _ridgeLengthText.Text = $"Ridge length: {(int)_ridgeLength.Value}%";
         _inletsText.Text = $"Major ocean inlets: {(int)_inlets.Value}";
-        _reachText.Text = $"Freshwater river reach: {(int)_riverReach.Value}%";
-        _windingText.Text = $"River meandering: {(int)_riverWinding.Value}%";
-        _tributariesText.Text = $"Maximum tributaries per river: {(int)_tributaries.Value}";
+        _reachText.Text = $"Inland channel reach: {(int)_riverReach.Value}%";
+        _windingText.Text = $"Channel meandering: {(int)_riverWinding.Value}%";
+        _tributariesText.Text = $"Maximum joining branches: {(int)_tributaries.Value}";
     }
 
     // =========================================================
@@ -375,7 +375,7 @@ public partial class MapConceptViewer : Node2D
         _status.Text = procedural
             ? $"Seed {seed} | Coastline v{MapConceptGenerator.GeneratorVersion}\n" +
               $"Land: {MapConceptGenerator.LandPercent(layout):F1}% of map | " +
-              $"offshore islands: {layout.Islets.Count}/{parameters.Value.OffshoreIslands}\n" +
+              $"other land components: {layout.Islets.Count} (offshore target {parameters.Value.OffshoreIslands})\n" +
               $"Mountains: {layout.MountainRidges.Count} (range " +
               $"{parameters.Value.MinMountainRegions}–{parameters.Value.MaxMountainRegions}) | " +
               $"Master: {MapConceptMasterElevation.Resolution}×{MapConceptMasterElevation.Resolution}" +
@@ -384,8 +384,8 @@ public partial class MapConceptViewer : Node2D
               $"Preview: {MapConceptElevationGrid.Columns}×{MapConceptElevationGrid.Rows}\n" +
               $"Ocean inlets: {layout.Waterways.FindAll(w => w.Kind == ConceptWaterKind.OceanInlet).Count} | " +
               $"Rivers: {layout.Waterways.FindAll(w => w.Kind == ConceptWaterKind.River).Count} | " +
-              $"Tributaries: {layout.Waterways.FindAll(w => w.Kind == ConceptWaterKind.Tributary).Count}\n" +
-              "Water carved in 4096 master; inland lakes are MAP2.2B."
+              $"Channel branches: {layout.Waterways.FindAll(w => w.Kind == ConceptWaterKind.Tributary).Count}\n" +
+              "Continuous sea-level corridors; isolated lakes are MAP2.2B."
             : $"Authored preset Island 1 | Decorative seed {seed}\n" +
               "Original forests, mountains, roads and sites preserved.";
         GD.Print($"[MAP2.2A] {(procedural ? "Procedural island" : "Authored preset")} seed {seed}; " +

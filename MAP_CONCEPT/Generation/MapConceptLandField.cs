@@ -17,7 +17,9 @@ internal sealed class MapConceptLandField : IDisposable
 
     private readonly FastNoiseLite _macro, _detail, _warpX, _warpY;
     private readonly List<Ellipse> _lands = new();
-    private readonly List<PathShape> _arms = new(), _inlets = new();
+    private readonly List<PathShape> _arms = new();
+    private readonly MapConceptWaterFootprint _water;
+    private readonly List<ConceptWaterway> _waterways;
     private readonly float _roughness, _complexity, _unionSmooth;
     private readonly Vector2 _centre;
 
@@ -28,7 +30,6 @@ internal sealed class MapConceptLandField : IDisposable
         _roughness = p.CoastRoughness / 100f;
         _complexity = p.LandmassComplexity / 100f;
         float branching = p.BaysAndPeninsulas / 100f;
-        float penetration = p.OceanPenetration / 100f;
         float scale = Mathf.Sqrt(p.LandCoverage / 55f);
         _centre = new Vector2(rng.Range(-52f, 52f), rng.Range(-30f, 30f));
         _macro = Noise(rng.NextInt(), 0.0036f, 3);
@@ -80,65 +81,21 @@ internal sealed class MapConceptLandField : IDisposable
             _arms.Add(new PathShape(points));
         }
 
-        // Ocean-connected paths: a wide outer bay narrows into a winding
-        // estuary-like inland channel. Future freshwater rivers are separate.
-        // Always create at least one ocean-connected channel. This path starts
-        // outside the map and reaches the solid central land core.
-        int inlets = p.MajorOceanInlets;
-        float inletPhase = rng.Range(0f, Mathf.Tau);
-        for (int i = 0; i < inlets; i++)
-        {
-            float angle = inletPhase + Mathf.Tau * (i + rng.Range(-0.26f, 0.26f)) /
-                Mathf.Max(1f, inlets);
-            Vector2 direction = new(Mathf.Cos(angle), Mathf.Sin(angle));
-            Vector2 side = new(-direction.Y, direction.X);
-            float endDistance = Mathf.Lerp(145f, 42f, penetration) +
-                rng.Range(-16f, 27f);
-            float bend = rng.Range(-200f, 200f) * (0.30f + 0.70f * penetration);
-            float wiggle = rng.Range(-75f, 75f) * penetration;
-            var points = new PathPoint[17];
-            for (int j = 0; j < points.Length; j++)
-            {
-                float t = j / (float)(points.Length - 1);
-                float reach = Mathf.Lerp(1000f, endDistance, t);
-                Vector2 position = _centre + direction * reach +
-                    side * (bend * Mathf.Sin(Mathf.Pi * t) +
-                        wiggle * Mathf.Sin(3f * Mathf.Pi * t) * t);
-                float mouth = Mathf.Lerp(75f, 11f, t);
-                float basin = 85f * penetration *
-                    Mathf.Exp(-Mathf.Pow((t - 0.57f) / 0.17f, 2f));
-                points[j] = new PathPoint(position, (mouth + basin) *
-                    Mathf.Lerp(0.55f, 1.20f, penetration));
-            }
-            _inlets.Add(new PathShape(points));
-        }
+        // Water is geographic negative space, before contour extraction or
+        // elevation. Export these exact sampled corridors for future 3D use.
+        _waterways = MapConceptWaterGenerator.CreateNetwork(p, _centre, SampleBase, ref rng);
+        _water = new MapConceptWaterFootprint(_waterways);
     }
 
     // =========================================================
-    // Preserve the *same* excavating paths as explicit map data. Do not
-    // regenerate independent blue lines or re-roll geography in Water/.
-    public List<ConceptWaterway> ExportOceanInlets()
-    {
-        var result = new List<ConceptWaterway>(_inlets.Count);
-        for (int i = 0; i < _inlets.Count; i++)
-        {
-            PathPoint[] samples = _inlets[i].Samples;
-            var positions = new Vector2[samples.Length];
-            var widths = new float[samples.Length];
-            var surfaces = new float[samples.Length];
-            for (int j = 0; j < samples.Length; j++)
-            {
-                positions[j] = samples[j].Position;
-                widths[j] = samples[j].Radius;
-            }
-            result.Add(new ConceptWaterway(ConceptWaterKind.OceanInlet, i + 1,
-                positions, widths, surfaces));
-        }
-        return result;
-    }
+    public List<ConceptWaterway> ExportWaterways() => new(_waterways);
 
     // =========================================================
-    public float Sample(Vector2 position)
+    public float Sample(Vector2 position) =>
+        Mathf.Min(SampleBase(position), -_water.Sample(position));
+
+    // =========================================================
+    private float SampleBase(Vector2 position)
     {
         float warp = 14f + _roughness * 44f + _complexity * 25f;
         Vector2 point = position + new Vector2(
@@ -153,9 +110,6 @@ internal sealed class MapConceptLandField : IDisposable
 
         land += _macro.GetNoise2D(point.X, point.Y) * (18f + 24f * _complexity);
         land += _detail.GetNoise2D(point.X, point.Y) * (4f + 22f * _roughness);
-
-        foreach (PathShape inlet in _inlets)
-            land = Mathf.Min(land, -PathField(point, inlet));
 
         // Sea border; gradual erosion near the frame, then guaranteed water
         // at the outer samples so marching-squares loops remain closed.

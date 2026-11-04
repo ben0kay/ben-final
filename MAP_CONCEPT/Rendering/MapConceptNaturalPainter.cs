@@ -187,6 +187,10 @@ internal sealed class MapConceptNaturalPainter
                 float scale = Layout.Elevation == null ? 1f : Mathf.Lerp(0.75f, 1.3f, elevation);
                 float width = MapConceptDrawingGeometry.Range(rng, 9, 23),
                     height = MapConceptDrawingGeometry.Range(rng, 14, 36);
+                // Test the whole icon's enclosing radius, not only its base.
+                // A mountain symbol must never bridge a narrow water corridor.
+                if (Layout.IsProcedural && Layout.ShoreClearance(p) <
+                    Mathf.Max(width, height) * scale + 12f) continue;
                 DrawMountain(p, width * scale, height * scale);
             }
         }

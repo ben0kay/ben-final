@@ -12,7 +12,8 @@
 | **BW-MAP2.1** | Seed-dependent mountain count/position, coherent inland ridges, foothills, lowland valleys, sampled elevation, contour illustration and export | **Owner viewed F6 mountain map; tuning ongoing** |
 | **BW-MAP2.1B** | **4096×4096 master elevation** on a proposed 12×12 km square map, high-detail shaded-relief image, more usable framing/zoom, bounded mountain-local detail seeds, R16+JSON export | **Implemented in source; Godot C#/F6 validation pending** |
 | **BW-MAP2.2A** | Sea inlets, freshwater rivers, tributaries, carving and water mask | **Owner tested F6; disconnected rivers and blocky drawing found** |
-| **BW-MAP2.2A-R1** | Coast-validated river outlets, shared smoothed carve/render path, ocean-matched colouring and waterway connection IDs | **Source correction pushed; awaiting F6 validation** |
+| **BW-MAP2.2A-R1** | Coast-validated outlets and matching river colour | **Superseded: owner clarified that water must shape land, not overlay it** |
+| **BW-MAP2.2A-R2** | Unified sea-level inlet/channel corridor, connected basin or opposite mouth, delta-like joining branches, shared shoreline and land-component preservation | **Implemented in source; C#/F6 validation pending** |
 | **BW-MAP2.2B** | Standalone inland lakes, overflow and wetlands | **Planned** |
 | **BW-MAP2.3 — planned** | Forest zones, meadows, wetlands and biome suitability from elevation/moisture |
 | **BW-MAP2.4 — planned** | Variable towns/cities/roads and numbered POIs, placement feasibility and connectivity |
@@ -64,7 +65,7 @@
 
 **Current validation evidence:** Focused static source/scene checks only; there is no Godot/.NET executable in the implementing environment. F6 screenshots and Godot compile confirmation are needed before marking MAP2.1 accepted.
 
-## MAP2.2A water system contract
+## MAP2.2A original water contract — superseded by R2 below
 
 This milestone lives inside `MAP_CONCEPT/`; it does not modify the 3D `WORLD/` prototype or planned `WORLD_CONCEPT/` handoff. The existing ocean-carving paths are retained as typed, numbered inlet features. Each generated island requests 1–3 major ocean-connected inlets (default 1). A separately seeded, bounded elevation-guided path generator attempts a freshwater continuation inland and optional joining tributaries. The main water route is stored source-to-mouth, including widths and a nonincreasing downstream water-level profile. The algorithm is an approximate valley walker, **not** a watershed or erosion simulator; unsuitable geography can result in shorter or missing rivers.
 
@@ -74,9 +75,21 @@ The 4096 master carves freshwater channels and blends their banks locally. It st
 
 **F6 acceptance:** Test multiple seeds, especially 0/100% Ocean Penetration, River Reach and Winding. Check inland connection, river/tributary joins, no obvious uphill reversals, correct river carving and same-seed reproducibility. Check the 3 export files and Authored Preset. Coastline output may change from previous versions because guaranteed inlets alter the land mask. This source pass is not yet runtime-validated.
 
-## MAP2.2A-R1 — User-reported river discontinuities (November 4, 2026)
+## MAP2.2A-R1 — Historical correction, superseded by R2 (November 4, 2026)
 
 - **Observed:** Owner screenshots show separate blue river blocks, with River 1/River 2 apparently not reaching Ocean Inlet 2; water tint differs sharply from the ocean. This is a MAP2.2A regression and must be resolved **before** starting MAP2.2B.
 - **Code finding:** The river-mouth finder chose an arbitrary inland point in a forward fan and appended the original inlet tip; it did not explicitly detect the shoreline crossing. The visual painter layered three wide, flat-ended strokes per segment while master carving used raw linear segments.
 - **Fix (source):** Scan out from an actual inlet sea point to the first mainland shore, bisect the real land/water boundary, then start upstream inland. Complete the waterway via the true shore and a short sea overlap. If no valid coast crossing exists, skip the river instead of rendering a detached feature. Main/tributary records export their parent waterway IDs. Use common Catmull-Rom centreline samples for the painter and raster carver, same ocean RGB and rounded water caps. Terrain export format remains R16 + R8.
 - **Validation needed:** Rebuild F6. Revisit the owner-provided disconnected River 2 seed if saved; test 1 and 3 ocean inlets, short/long river reach, high winding and several random seeds. For *each* displayed river, follow its downstream water path and verify it intersects its matching ocean inlet with no land-coloured gap. Zoom in to inspect smooth edges and matching sea blue; compare vector channels with R8 carving. Confirm no river is emitted for an unreachable inlet, no detached tributary ends, export schema 8/version 6 and JSON `connected_to` values. This remains a bounded elevation-guided river planner, not a full global hydrology simulation.
+
+## MAP2.2A-R2 — Geographic inlet/channel continuation (November 4, 2026)
+
+**Owner clarification:** “River” means a progressively narrowing continuation of ocean water winding inland, optionally branching, opening to the opposite coast or widening into a connected basin. Isolated lakes come next, after this shape is accepted.
+
+**Implemented source:** Generate the entire sea-level network before coastlines and mountains; subtract its sampled-width footprint from the land field using an on-demand spatial index. Split inlet/river records at a shared sample, not into independently generated paths. Joining anabranches share both trunk endpoints. Render water as geographic negative space with ordinary shoreline banks; remove the procedural stroke painter and uphill freshwater walker. Preserve all extracted land components so through-channels cannot erase a large half of the island. Mountain placement and symbols respect channel shores.
+
+**Export:** Schema 9 / generator 7. `coastal_channel`, route `ending`, `point_order`, sampled geometry and branch `rejoins` metadata distinguish these features from old freshwater paths. All present coastal water and connected basins are sea-level ocean R8 class 1; zero R16 denotes water/sea level, not an underwater bed. Coast polygons and the raster are authoritative; paths must not be smoothed again. Changing water controls deliberately changes geography. `ConnectedBasin` is a route-design endpoint; merging with other corridors may change the final water shape.
+
+**Configuration/performance:** Existing MajorOceanInlets, RiverReach, RiverWinding and MaxTributaries fields remain compatible; visible labels describe channels and joining branches. At reach ≥55%, a seeded 35% choice allows an opposite-coast route; otherwise the route widens into a basin. Branch count remains bounded by the requested maximum. Generation is synchronous and on demand, with no new idle work; regeneration time and memory need owner observation.
+
+**Acceptance:** Use the MAP_CONCEPT README's R2 checks. Build C#, inspect continuous banks, both route endings, branch joins, mountain clearance, preserved land halves and exports at several seeds/extremes. Compilation and F6 appearance are unverified in the implementing environment. If acceptable, proceed to **MAP2.2B isolated lakes**, without changing WORLD or creating WORLD_CONCEPT yet.

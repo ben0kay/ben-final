@@ -19,7 +19,6 @@ internal sealed class MapConceptFeaturePainter
     public void Draw()
     {
         DrawWaterways();
-        new MapConceptWaterPainter(Canvas, Layout).Draw();
         DrawRoads();
         DrawSites();
         DrawCompassAndFrame();

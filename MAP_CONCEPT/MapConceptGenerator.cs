@@ -5,7 +5,7 @@ using Godot;
 
 public static class MapConceptGenerator
 {
-    public const int GeneratorVersion = 6;
+    public const int GeneratorVersion = 7;
     private const int MaxAttempts = 5;
 
     #region Generation
@@ -31,17 +31,16 @@ public static class MapConceptGenerator
             Rect2 bounds = MapConceptGeometry.Bounds(coast);
             float total = 0f;
             foreach (Vector2[] contour in contours) total += MapConceptGeometry.PolygonArea(contour);
-            float fraction = area / Mathf.Max(total, 1f);
-            float score = Mathf.Min(area / 160000f, 1f) * fraction;
+            float score = Mathf.Min(total / 160000f, 1f);
             if (bounds.Size.X < 450f || bounds.Size.Y < 270f) score *= 0.45f;
 
             var candidate = MapConceptLayout.CreateProcedural(coast);
-            candidate.Waterways.AddRange(field.ExportOceanInlets());
-            // Natural fragments count toward the user's island limit.
-            for (int i = 1; i < contours.Count && candidate.Islets.Count < parameters.OffshoreIslands; i++)
-                if (MapConceptGeometry.PolygonArea(contours[i]) >= 650f &&
-                    MapConceptGeometry.PolygonArea(contours[i]) < area * 0.23f)
-                    candidate.Islets.Add(contours[i]);
+            candidate.Waterways.AddRange(field.ExportWaterways());
+            // Through-channels and anabranches can split significant land.
+            // Preserve ALL resulting components, regardless of the optional
+            // offshore-islet request; never erase the other half of the island.
+            for (int i = 1; i < contours.Count; i++)
+                candidate.Islets.Add(contours[i]);
 
             var extraRandom = new MapConceptSeedStream(state ^ 0xD81956A02D35803FUL);
             MapConceptOffshoreIslands.AddOffshoreIslands(candidate, parameters.OffshoreIslands, ref extraRandom);
@@ -52,7 +51,7 @@ public static class MapConceptGenerator
                 bestScore = score;
             }
             if (area >= 105000f && bounds.Size.X >= 530f && bounds.Size.Y >= 320f &&
-                fraction >= 0.76f) break;
+                total >= 160000f) break;
         }
 
         // Explicit procedural-only safety fallback. Never accidentally attach
@@ -60,7 +59,6 @@ public static class MapConceptGenerator
         if (best != null)
         {
             MapConceptMountainGenerator.Populate(best, parameters);
-            MapConceptWaterGenerator.Populate(best, parameters);
             MapConceptMasterGenerator.Populate(best, parameters.Seed);
             return best;
         }
@@ -75,7 +73,6 @@ public static class MapConceptGenerator
         // A degenerate coast has no carved channel; preserve a safe coastline
         // rather than inventing an inlet disconnected from the sea.
         MapConceptMountainGenerator.Populate(fallback, parameters);
-        MapConceptWaterGenerator.Populate(fallback, parameters);
         MapConceptMasterGenerator.Populate(fallback, parameters.Seed);
         return fallback;
     }

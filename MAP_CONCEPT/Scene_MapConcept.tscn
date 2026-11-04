@@ -223,7 +223,7 @@ value = 1.0
 
 [node name="RiverReachLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "Freshwater river reach: 70%"
+text = "Inland channel reach: 70%"
 
 [node name="RiverReachSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
@@ -233,7 +233,7 @@ value = 70.0
 
 [node name="RiverWindingLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "River meandering: 65%"
+text = "Channel meandering: 65%"
 
 [node name="RiverWindingSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
@@ -243,7 +243,7 @@ value = 65.0
 
 [node name="TributariesLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "Maximum tributaries per river: 3"
+text = "Maximum joining branches: 3"
 
 [node name="TributariesSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2

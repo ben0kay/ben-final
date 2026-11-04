@@ -159,7 +159,7 @@ public sealed class MapConceptLayout
         var parameters = settings?.Validated();
         var data = new
         {
-            schema = 8, id = "island-concept-v1",
+            schema = 9, id = "island-concept-v1",
             layout_mode = IsProcedural ? "procedural_coastline" : "authored_preset",
             world_seed = worldSeed.ToString(CultureInfo.InvariantCulture),
             generator_version = IsProcedural ? MapConceptGenerator.GeneratorVersion : 0,
@@ -209,6 +209,11 @@ public sealed class MapConceptLayout
             {
                 id = w.Id, name = w.Name, kind = w.Kind.ToString(),
                 connected_to = w.ConnectedWaterwayId,
+                rejoins = w.RejoinsWaterwayId,
+                coastal_channel = w.CoastalChannel,
+                ending = w.Ending.ToString(),
+                point_order = w.CoastalChannel ? "ocean_to_inland" : "source_to_mouth",
+                geometry = w.CoastalChannel ? "sampled_corridor" : "control_polyline",
                 points = Coords(w.Points), half_widths = w.HalfWidths,
                 surface_levels = w.SurfaceLevels
             }).ToArray(),
@@ -219,7 +224,9 @@ public sealed class MapConceptLayout
                 format = "r8",
                 classes = new { land = 0, ocean = 1, river = 2, tributary = 3 },
                 sample_order = "row_major_top_to_bottom",
-                surface_levels = "normalized; per-waterway vertices in waterways"
+                surface_levels = "normalized; per-waterway vertices in waterways",
+                coastal_channels = "ocean class 1; shoreline defines the authoritative land/water boundary",
+                bathymetry = "not encoded; zero is sea level, not underwater bed depth"
             },
             master_elevation = MasterElevation == null ? null : new
             {
@@ -255,6 +262,32 @@ public sealed class MapConceptLayout
         if (PointInPolygon(point, Coast)) return true;
         foreach (Vector2[] island in Islets) if (PointInPolygon(point, island)) return true;
         return false;
+    }
+
+    // =========================================================
+    // Clearance to the containing land component, including channel-cut halves
+    // and delta islands. Used only while generating/drawing the concept.
+    public float ShoreClearance(Vector2 point)
+    {
+        if (PointInPolygon(point, Coast)) return BoundaryDistance(point, Coast);
+        foreach (Vector2[] island in Islets)
+            if (PointInPolygon(point, island)) return BoundaryDistance(point, island);
+        return 0f;
+    }
+
+    // =========================================================
+    private static float BoundaryDistance(Vector2 point, Vector2[] polygon)
+    {
+        float best = float.MaxValue;
+        for (int i = 0; i < polygon.Length; i++)
+        {
+            Vector2 a = polygon[i], delta = polygon[(i + 1) % polygon.Length] - a;
+            float length = delta.LengthSquared();
+            float t = length <= 0.00001f ? 0f :
+                Mathf.Clamp((point - a).Dot(delta) / length, 0f, 1f);
+            best = Mathf.Min(best, point.DistanceTo(a + delta * t));
+        }
+        return best;
     }
 
     // =========================================================

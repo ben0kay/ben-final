@@ -8,7 +8,7 @@ internal readonly record struct MapConceptWaterSample(
 
 internal static class MapConceptWaterGeometry
 {
-    private const int SamplesPerSegment = 8;
+    internal const int SamplesPerSegment = 8;
 
     // =========================================================
     public static MapConceptWaterSample[] Smooth(ConceptWaterway water)

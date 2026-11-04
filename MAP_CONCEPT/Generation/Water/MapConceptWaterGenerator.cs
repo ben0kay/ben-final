@@ -1,217 +1,131 @@
-// BW-MAP2.2A: ocean-fed river outlets, elevation-guided upstream routes and tributaries.
-// Produces bounded, seeded data paths; master rasterization is owned by WaterCarver.
+// MAP2.2A-R2: one sea-connected inlet/channel network shapes land BEFORE mountains.
+// These are sea-level geographic corridors, not simulated freshwater drainage.
 using System;
 using System.Collections.Generic;
 using Godot;
 
 internal static class MapConceptWaterGenerator
 {
-    private const ulong RiverSalt = 0x71B2C59D8453EA10UL;
-
-    #region River network
+    #region Coastal network
 
     // =========================================================
-    public static void Populate(MapConceptLayout map, MapConceptParameters settings)
+    public static List<ConceptWaterway> CreateNetwork(MapConceptParameters settings,
+        Vector2 centre, Func<Vector2, float> baseLand, ref MapConceptSeedStream random)
     {
-        if (map.Elevation == null) return;
-        var random = new MapConceptSeedStream(unchecked((ulong)settings.Seed) ^ RiverSalt);
-        // Rendering and the 4096 master both use this smoothed shoreline.
-        Vector2[] coast = MapConceptDrawingGeometry.SmoothClosed(map.Coast, 2);
-        int riverNumber = 0, branchNumber = 0;
-        // Snapshot avoids mutating the enumerated collection as rivers are added.
-        foreach (ConceptWaterway inlet in map.Waterways.FindAll(w =>
-            w.Kind == ConceptWaterKind.OceanInlet))
+        var result = new List<ConceptWaterway>();
+        float phase = random.Range(0f, Mathf.Tau);
+        float penetration = settings.OceanPenetration / 100f;
+        float reach = settings.RiverReach / 100f;
+        float winding = settings.RiverWinding / 100f;
+        int branchNumber = 0;
+        for (int number = 1; number <= settings.MajorOceanInlets; number++)
         {
-            if (inlet.Kind != ConceptWaterKind.OceanInlet) continue;
-            if (!TryRiverMouth(map, coast, inlet, out Vector2 inlandStart,
-                out Vector2 shoreline, out Vector2 oceanOverlap, out Vector2 heading))
-                continue;
-
-            var fromMouth = TraceUpstream(map, coast, inlandStart, heading,
-                Mathf.RoundToInt(Mathf.Lerp(15f, 70f, settings.RiverReach / 100f)),
-                settings.RiverWinding, ref random);
-            if (fromMouth.Count < 5) continue;
-
-            // The final two samples cross the *verified* coast into the inlet.
-            // Never jump from an arbitrary inland point to an unverified tip.
-            fromMouth.Reverse();
-            fromMouth.Add(shoreline);
-            fromMouth.Add(oceanOverlap);
-            var river = MakeWaterway(ConceptWaterKind.River, ++riverNumber,
-                fromMouth, 3.8f, 7.5f, 0f, map.Elevation)
-                with { ConnectedWaterwayId = inlet.Id };
-            map.Waterways.Add(river);
-
-            // Tribs join a major river, not random seaward coast points.
-            int tributaries = random.NextInt(0, settings.MaxTributaries + 1);
-            for (int b = 0; b < tributaries; b++)
+            float angle = phase + Mathf.Tau * (number - 1 + random.Range(-0.15f, 0.15f)) /
+                settings.MajorOceanInlets;
+            Vector2 direction = new(Mathf.Cos(angle), Mathf.Sin(angle));
+            Vector2 side = new(-direction.Y, direction.X);
+            bool through = reach >= 0.55f && random.Range(0f, 1f) < 0.35f;
+            float end = through ? -1000f : Mathf.Lerp(100f, -220f, reach);
+            float bend = random.Range(-110f, 110f) * (0.35f + penetration * 0.65f);
+            float wiggle = random.Range(35f, 85f) * winding;
+            float channelWidth = random.Range(17f, 24f);
+            float basinWidth = random.Range(45f, 75f);
+            // A basin ends inside the pre-water landmass, with room for banks.
+            // Pull its endpoint toward the guaranteed central core if needed.
+            if (!through)
+                for (int retry = 0; retry < 6 &&
+                    baseLand(centre + direction * end) < basinWidth + 24f; retry++)
+                    end *= 0.5f;
+            const int Count = 81;
+            var points = new Vector2[Count];
+            var widths = new float[Count];
+            int junction = 1;
+            for (int i = 0; i < Count; i++)
             {
-                if (river.Points.Length < 11) break;
-                int junction = random.NextInt(river.Points.Length / 3,
-                    Mathf.Max(river.Points.Length / 3 + 1, river.Points.Length * 3 / 4));
-                Vector2 downstream = (river.Points[junction + 1] -
-                    river.Points[junction - 1]).Normalized();
-                Vector2 upstream = -downstream;
-                float direction = (b % 2 == 0 ? 1f : -1f) *
-                    random.Range(0.75f, 1.30f);
-                Vector2 sideways = upstream.Rotated(direction);
-                var branch = TraceUpstream(map, coast, river.Points[junction], sideways,
-                    random.NextInt(10, 27), settings.RiverWinding, ref random);
-                if (branch.Count < 5) continue;
-                branch.Reverse();
-                map.Waterways.Add(MakeWaterway(ConceptWaterKind.Tributary,
-                    ++branchNumber, branch, 2.1f, 3.7f,
-                    river.SurfaceLevels[junction], map.Elevation)
-                    with { ConnectedWaterwayId = river.Id });
+                float t = i / (Count - 1f);
+                float distance = Mathf.Lerp(1000f, end, t);
+                float inland = Mathf.Clamp((650f - distance) / 420f, 0f, 1f);
+                float envelope = Mathf.Sin(t * Mathf.Pi);
+                points[i] = centre + direction * distance + side * envelope *
+                    (bend + wiggle * Mathf.Sin(t * Mathf.Pi * (through ? 5f : 3f)));
+                // A broad estuary tapers into the SAME channel, with gentle
+                // width variation. All widths survive the 8-unit contour grid.
+                float width = Mathf.Lerp(85f + penetration * 30f, channelWidth, inland);
+                width += Mathf.Sin(t * 7f * Mathf.Pi) * 2.5f * inland;
+                if (through)
+                    width = Mathf.Lerp(width, 85f, Mathf.SmoothStep(0f, 1f,
+                        Mathf.Clamp((-distance - 280f) / 420f, 0f, 1f)));
+                else
+                    width = Mathf.Lerp(width, basinWidth,
+                        Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.87f) / 0.13f, 0f, 1f)));
+                widths[i] = width;
+                if (distance > Mathf.Lerp(300f, 210f, penetration)) junction = i;
             }
-        }
-    }
 
-    // =========================================================
-    private static bool TryRiverMouth(MapConceptLayout map, Vector2[] coast,
-        ConceptWaterway inlet,
-        out Vector2 inlandStart, out Vector2 shoreline, out Vector2 oceanOverlap,
-        out Vector2 heading)
-    {
-        Vector2 tip = inlet.Points[^1];
-        inlandStart = shoreline = oceanOverlap = tip;
-        // If the final inlet control point sits in discarded inland water,
-        // locate its last genuine sea vertex and follow that local tangent.
-        int seaIndex = inlet.Points.Length - 1;
-        while (seaIndex >= 0 &&
-            MapConceptLayout.PointInPolygon(inlet.Points[seaIndex], coast))
-            seaIndex--;
-        if (seaIndex < 1) { heading = Vector2.Zero; return false; }
-        Vector2 sea = inlet.Points[seaIndex];
-        Vector2 toward = inlet.Points[Math.Min(seaIndex + 1, inlet.Points.Length - 1)];
-        heading = (toward - inlet.Points[seaIndex - 1]).Normalized();
-        if (heading.LengthSquared() < 0.5f) return false;
-
-        // Walk from existing inlet WATER to the FIRST mainland shoreline.
-        // This is the confluence. A finite fan handles curved inlet heads.
-        float[] angles = { 0f, -0.20f, 0.20f, -0.42f, 0.42f, -0.68f, 0.68f };
-        foreach (float angle in angles)
-        {
-            Vector2 direction = heading.Rotated(angle);
-            Vector2 previousSea = sea;
-            for (float distance = 3f; distance <= 155f; distance += 3f)
-            {
-                Vector2 next = sea + direction * distance;
-                if (!MapConceptLayout.PointInPolygon(next, coast))
+            // Sample the WHOLE path once, then split only its labels/data.
+            // Shared endpoint, tangent and width prevent an inlet/river seam.
+            var whole = new ConceptWaterway(ConceptWaterKind.OceanInlet, number,
+                points, widths, new float[Count]);
+            MapConceptWaterSample[] samples = MapConceptWaterGeometry.Smooth(whole);
+            int split = junction * MapConceptWaterGeometry.SamplesPerSegment;
+            var inlet = Section(samples, 0, split, ConceptWaterKind.OceanInlet, number)
+                with { CoastalChannel = true };
+            var river = Section(samples, split, samples.Length - 1,
+                ConceptWaterKind.River, number) with
                 {
-                    previousSea = next;
-                    continue;
-                }
+                    CoastalChannel = true, ConnectedWaterwayId = inlet.Id,
+                    Ending = through ? ConceptWaterEnding.OppositeCoast : ConceptWaterEnding.ConnectedBasin
+                };
+            result.Add(inlet);
+            result.Add(river);
 
-                // Bisect the real land/water crossing for a gap-free join.
-                Vector2 waterEdge = previousSea, landEdge = next;
-                for (int refine = 0; refine < 8; refine++)
-                {
-                    Vector2 mid = (waterEdge + landEdge) * 0.5f;
-                    if (MapConceptLayout.PointInPolygon(mid, coast))
-                        landEdge = mid;
-                    else waterEdge = mid;
-                }
-                Vector2 shorePoint = (waterEdge + landEdge) * 0.5f;
-                Vector2 start = shorePoint + direction * 17f;
-                Vector2 overlap = shorePoint - direction * 10f;
-                // Avoid starting in a tiny peninsula or immediately re-entering sea.
-                if (!MapConceptLayout.PointInPolygon(start, coast) ||
-                    !MapConceptLayout.PointInPolygon(start + direction * 12f, coast) ||
-                    MapConceptLayout.PointInPolygon(overlap, coast) ||
-                    map.Elevation!.Sample(start) < 0.012f)
-                    break;
-
-                inlandStart = start;
-                shoreline = shorePoint;
-                oceanOverlap = overlap;
-                heading = direction;
-                return true;
-            }
-        }
-        return false; // Never emit a visually disconnected river.
-    }
-
-    // =========================================================
-    // =========================================================
-    // Grow inland from the outlet towards gradually higher ground. This is a
-    // heuristic valley walker, not a full filled-depression watershed model.
-    private static List<Vector2> TraceUpstream(MapConceptLayout map,
-        Vector2[] coast, Vector2 origin,
-        Vector2 heading, int maxSteps, int winding, ref MapConceptSeedStream random)
-    {
-        var points = new List<Vector2>(maxSteps + 1) { origin };
-        Vector2 direction = heading.Normalized(), position = origin;
-        float previousHeight = map.Elevation!.Sample(origin);
-
-        for (int step = 0; step < maxSteps; step++)
-        {
-            float best = float.NegativeInfinity;
-            Vector2 chosen = Vector2.Zero, chosenDir = Vector2.Zero;
-            float chosenHeight = 0f;
-            const int Choices = 13;
-            for (int option = 0; option < Choices; option++)
+            // Optional anabranches reconnect to the trunk at BOTH ends. The
+            // enclosed land survives contour extraction as a delta-like island.
+            int branches = random.NextInt(0, settings.MaxTributaries + 1);
+            for (int b = 0; b < branches; b++)
             {
-                float deviation = (option - 6) / 6f * Mathf.Lerp(0.42f, 1.13f,
-                    winding / 100f);
-                Vector2 nextDir = direction.Rotated(deviation).Normalized();
-                Vector2 candidate = position + nextDir * 14f;
-                if (!MapConceptLayout.PointInPolygon(candidate, coast) ||
-                    !MapConceptLayout.PointInPolygon(position.Lerp(candidate, 0.5f),
-                        coast)) continue;
-                float height = map.Elevation.Sample(candidate);
-                if (height < 0.014f || height > 0.74f || height < previousHeight - 0.017f)
-                    continue;
-
-                bool loops = false;
-                for (int old = 0; old < points.Count - 2; old++)
-                    if (candidate.DistanceSquaredTo(points[old]) < 25f * 25f)
-                        { loops = true; break; }
-                if (loops) continue;
-
-                float grade = Mathf.Clamp((height - previousHeight) * 110f, -1.5f, 2f);
-                float score = grade + direction.Dot(nextDir) * 1.7f +
-                    random.Range(-0.40f, 0.40f) +
-                    Mathf.Clamp(height * 0.45f, 0f, 0.25f);
-                if (score <= best) continue;
-                best = score;
-                chosen = candidate;
-                chosenDir = nextDir;
-                chosenHeight = height;
+                int start = Math.Max(0, split - 64 + b * 12);
+                int finish = Math.Min(samples.Length - 1, split + 90 + b * 12);
+                Vector2 a = samples[start].Position, z = samples[finish].Position;
+                Vector2 tangent = (z - a).Normalized();
+                Vector2 normal = new(-tangent.Y, tangent.X);
+                float offset = (b % 2 == 0 ? 1f : -1f) * random.Range(65f, 100f);
+                var branchPoints = new Vector2[25];
+                var branchWidths = new float[25];
+                for (int j = 0; j < branchPoints.Length; j++)
+                {
+                    float t = j / (branchPoints.Length - 1f);
+                    branchPoints[j] = a.Lerp(z, t) + normal * offset * Mathf.Sin(t * Mathf.Pi);
+                    branchWidths[j] = Mathf.Lerp(samples[start].HalfWidth,
+                        samples[finish].HalfWidth, t) * (1f - 0.35f * Mathf.Sin(t * Mathf.Pi));
+                }
+                var branch = new ConceptWaterway(ConceptWaterKind.Tributary, ++branchNumber,
+                    branchPoints, branchWidths, new float[branchPoints.Length]);
+                MapConceptWaterSample[] smooth = MapConceptWaterGeometry.Smooth(branch);
+                result.Add(Section(smooth, 0, smooth.Length - 1,
+                    ConceptWaterKind.Tributary, branchNumber) with
+                    {
+                        CoastalChannel = true, ConnectedWaterwayId = inlet.Id,
+                        RejoinsWaterwayId = river.Id, Ending = ConceptWaterEnding.RejoinsChannel
+                    });
             }
-            if (float.IsNegativeInfinity(best)) break;
-            points.Add(chosen);
-            position = chosen;
-            direction = (direction * 0.35f + chosenDir * 0.65f).Normalized();
-            previousHeight = chosenHeight;
         }
-        return points;
+        return result;
     }
 
     // =========================================================
-    // Heights are water-surface values along the path, always descending
-    // from source to mouth; WaterCarver lowers the terrain beneath them.
-    private static ConceptWaterway MakeWaterway(ConceptWaterKind kind, int number,
-        List<Vector2> sourceToMouth, float headWidth, float mouthWidth,
-        float downstreamLevel, MapConceptElevationGrid elevation)
+    private static ConceptWaterway Section(MapConceptWaterSample[] samples,
+        int start, int end, ConceptWaterKind kind, int number)
     {
-        int count = sourceToMouth.Count;
+        int count = end - start + 1;
+        var points = new Vector2[count];
         var widths = new float[count];
-        var levels = new float[count];
-        float surface = downstreamLevel;
-        for (int i = count - 1; i >= 0; i--)
+        for (int i = 0; i < count; i++)
         {
-            float t = i / (float)Mathf.Max(1, count - 1);
-            widths[i] = Mathf.Lerp(headWidth, mouthWidth, t);
-            if (i != count - 1)
-            {
-                float floor = Mathf.Max(0.005f, elevation.Sample(sourceToMouth[i]) - 0.012f);
-                surface = Mathf.Clamp(Mathf.Max(surface + 0.00035f,
-                    Mathf.Min(floor, surface + 0.0045f)), 0f, 0.90f);
-            }
-            levels[i] = surface;
+            points[i] = samples[start + i].Position;
+            widths[i] = samples[start + i].HalfWidth;
         }
-        return new ConceptWaterway(kind, number, sourceToMouth.ToArray(), widths, levels);
+        return new ConceptWaterway(kind, number, points, widths, new float[count]);
     }
     #endregion
 }

@@ -12,10 +12,13 @@ internal static class MapConceptOffshoreIslands
     {
         // Natural split-off landmasses were already added by contour extraction.
         const int MaxRetries = 750;
+        var channels = new MapConceptWaterFootprint(map.Waterways);
         for (int attempt = 0; attempt < MaxRetries && map.Islets.Count < wanted; attempt++)
         {
             Vector2 center = new(rng.Range(-700f, 700f), rng.Range(-452f, 452f));
             float radius = rng.Range(16f, 32f);
+            // Never use extra decorative islets to plug a planned channel.
+            if (channels.Sample(center) >= -radius - 12f) continue;
             if (Mathf.Abs(center.X) + radius > 734f ||
                 Mathf.Abs(center.Y) + radius > 476f || map.IsOnLand(center) ||
                 DistanceToPolygon(center, map.Coast) > 220f)
