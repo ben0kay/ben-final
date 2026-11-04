@@ -48,6 +48,9 @@ public sealed class MapConceptLayout
     public MapConceptMasterElevation? MasterElevation { get; internal set; }
 
     public bool IsProcedural { get; private set; }
+    // Vector-cut banks are final geometry: smoothing them again can close a
+    // thin river or move its shoreline away from the exported raster.
+    public bool FinalShoreline { get; internal set; }
     private MapConceptLayout(Vector2[] coast) => Coast = coast;
 
     // =========================================================
@@ -159,7 +162,7 @@ public sealed class MapConceptLayout
         var parameters = settings?.Validated();
         var data = new
         {
-            schema = 9, id = "island-concept-v1",
+            schema = 10, id = "island-concept-v1",
             layout_mode = IsProcedural ? "procedural_coastline" : "authored_preset",
             world_seed = worldSeed.ToString(CultureInfo.InvariantCulture),
             generator_version = IsProcedural ? MapConceptGenerator.GeneratorVersion : 0,
@@ -183,6 +186,7 @@ public sealed class MapConceptLayout
             } : null,
             map_units = new { width = MapWidth, height = MapHeight, metres_per_unit = MetresPerUnit },
             coordinate_convention = "X east, Y south (maps to world Z); map zero at island centre",
+            shoreline_geometry = FinalShoreline ? "final_vector_cut" : "smooth_closed_twice",
             coastline = Coords(Coast),
             islets = Islets.Select(Coords).ToArray(),
             elevation = Elevation == null ? null : new
@@ -304,3 +308,4 @@ public sealed class MapConceptLayout
         return inside;
     }
 }
+

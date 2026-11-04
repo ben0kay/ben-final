@@ -1,8 +1,6 @@
 # MAP_CONCEPT — Seeded island cartography
 
-**Status:** MAP2.2A-R2 implements the owner's clarified continuous **ocean inlet → narrowing inland channel → connected basin or opposite ocean coast**. The complete water corridor now cuts the land field before coast extraction, mountains and the 4096 master. It is no longer a blue line painted across existing land. **Source implemented; C# compilation and owner F6 validation pending.** Isolated lakes are still MAP2.2B. Authored preset and WORLD runtime are unchanged.
-
-The roadmap and later lake/forest/town work are in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+**Status:** MAP2.2A-R3 replaces R2's broad centre-cut bays with **long, thin, repeatedly winding rivers routed through a completed mainland**. The owner rejected R2 screenshots, including overly wide channels and large pools. R3 is source implemented, awaiting C# build and owner F6 confirmation. Isolated lakes remain MAP2.2B; WORLD/WORLD_CONCEPT are untouched.
 
 ## Run and controls
 
@@ -15,21 +13,22 @@ Open `res://MAP_CONCEPT/Scene_MapConcept.tscn`, build C# and press **F6**.
 - **Wheel / drag / R / L:** Cursor zoom up to 32×, pan, fit map and toggle labels. Hide settings provides more drawing room.
 - **Export:** Writes `user://map_concept_layout.json`, `map_concept_master_4096.r16` (32 MiB) and `map_concept_water_4096.r8` (16 MiB) for a procedural map.
 
-Water controls retain their saved Resource/property names: **Major inlets** 1–3; **Inland channel reach** 0–100%; **Channel meandering** 0–100%; **Maximum joining branches** 0–6. Ocean penetration affects the estuary taper and bend. Reach increases basin travel inland; at ≥55%, a seeded 35% choice can instead create an ocean-to-ocean passage. These choices are repeatable, not a guarantee every seed contains both endings. Changing water settings intentionally reshapes the island and can move its mountain ranges. Only mountain-detail changes preserve the coast.
+## MAP2.2A-R3 — Mainland, rivers, then mountains
 
-## MAP2.2A-R2 — Water shapes the geography
+1. Generate and select the **mainland** using only land/coast settings. Water settings no longer influence mainland candidate selection.
+2. Build one bounded mainland routing grid. Choose actual shore crossings from that landmass, then route through alternating inland waypoints, using A* to avoid leaving the land. Remove grid loops and smooth the path; reject routes without a sufficiently long inland run or safe channel clearance.
+3. Cut the narrow river footprint from the selected land polygons with native vector subtraction. This avoids increasing the entire coastline grid merely to represent a thin channel. Preserve all resulting land components.
+4. Add optional offshore islets, then place mountains/elevation and build the 4096 master. Mountain symbols and decorative elevation contours respect final water gaps.
 
-One sampled corridor defines the broad estuary, narrowing inland channel and its widening basin or second ocean mouth. Inlet and river records share the same junction position, tangent and width; splitting records only provides labels and IDs. Optional delta-like anabranches leave the inlet and rejoin its inland channel. Their endpoints are shared with the trunk. Branches can merge with one another or other water corridors.
+**Width and endings:** Main channels use **2.8–4 map-unit half-widths** (roughly 5.2–8 total after gentle variation), compared with R2's 17–24 half-widths. Mouths flare only over the first/last 65 path units, not across the map. Terminal pools have **9–12 unit radii**, broadening only at the end; the old 45–75-unit pools are removed. These are visual concept dimensions, not calibrated real-world river hydrology. Optional thin anabranches reconnect locally instead of making broad curved cuts.
 
-The full network is subtracted from the land field **before** extracting coastlines. Its banks use the exact same coastal apron and ink outlines as the ocean. Separate land components created by through-passages and delta branches are retained even when the optional offshore-island target is zero. The status therefore reports **other land components**, not a promise that this count equals the offshore target.
+**Water controls:** Existing Resource fields remain compatible. **Main rivers requested** (`MajorOceanInlets`) remains 1–3. **Inland river reach** adjusts the inland endpoint and the seeded probability of a second ocean outlet (40–75%). Even the low end requests a substantial inland route; zero no longer means a tiny bay. **River meandering** adjusts lateral waypoint displacement while retaining bends. **Ocean mouth widening** (`OceanPenetration`) affects only a short coastal flare. **Maximum joining branches** is an upper bound; invalid routes/branches are skipped, not painted across the ocean. The status counts are the actual features created.
 
-Mountains are generated on the resulting land; ridge placement checks intermediate points and distance from each containing land component's shores. Mountain icons require clearance for their full footprint. Coarse elevation, master raster and water mask use the resulting island boundaries. There is no procedural blue river overlay and no second freshwater carve.
+**One shoreline:** After cutting, `FinalShoreline` polygons are canonical. Drawing, master rasterization, land tests and exported coastline use those exact polygons without independently smoothing them again. The procedural beach/ink strokes are narrower so opposing banks cannot fill a thin river. JSON `shoreline_geometry = final_vector_cut` tells consumers not to smooth again. Coarse elevation samples can be wider-spaced than a river, so their decorative contour strokes are suppressed when crossing final water.
 
-**Water meaning:** These channels and connected basins are all sea-level, ocean-connected water, exported as **R8 class 1**. They are conceptual estuaries/straits, not a freshwater drainage simulation. A basin's planned endpoint is pulled toward the central land core if there is insufficient room. Other inlets can merge with it, so `ending` describes the constructed route, not a guarantee that a basin remains a separate lobe. Separate isolated lakes, freshwater flow, underwater bed depths and physical vertical scale remain future work. R16 zero currently marks sea level/water, not bathymetry.
+**Ownership:** `MapConceptLandField.cs` owns mainland only; `MapConceptGenerator.Finish` owns stage order. `Generation/Water/MapConceptRiverRouter.cs` owns the temporary A* grid, `MapConceptWaterGenerator.cs` creates the river network and `MapConceptWaterCutout.cs` cuts variable-width vector ribbons. `MapConceptWaterFootprint.cs` still excludes optional offshore islets from channels. The obsolete spline water helper is removed. No new processing manager or idle loop is added.
 
-**Ownership:** `Generation/Water/MapConceptWaterGenerator.cs` builds the network, `MapConceptWaterFootprint.cs` indexes its sampled widths for land-field queries, and `MapConceptWaterway.cs` owns typed metadata. `MapConceptLandField.cs` cuts the geographic channels; coast extraction and normal island rendering provide their banks. `MapConceptWaterCarver.cs` now classifies the final raster only. The old procedural stroke painter and uphill river walker have been removed.
-
-The spatial index bounds corridor queries during generation. All work remains on demand; no live processing manager is added. Master generation remains synchronous and should be checked for acceptable regeneration time on the owner's PC.
+**Limits:** At most eight placement attempts per requested river; no valid long route means fewer rivers rather than fabricated labels over broad sea. Candidate smoothing is clearance-checked; unexpected water-hole topology and cuts removing more than 8% of remaining land per feature are rejected. This is still sea-level connected concept water (R8 class 1), not physically simulated freshwater. R16 zero is sea level/water, not bathymetry; physical vertical scale and independent lakes remain future work. Generation stays synchronous and on demand; runtime timing is unmeasured.
 
 ## Three independent dimensions
 
@@ -58,7 +57,7 @@ MAP_CONCEPT/
 ├── Scene_MapConcept.tscn           Independent F6 viewer
 ├── MapConceptViewer.cs            Camera, UI, generation and export
 ├── MapConceptGenerator.cs         Coastline -> mountains -> master coordinator
-├── MapConceptLayout.cs            Authored/procedural data, schema-9 JSON
+├── MapConceptLayout.cs            Authored/procedural data, schema-10 JSON
 ├── MapConceptArt.cs               Godot drawing lifecycle / labels
 ├── Configuration/                 MapConceptMaster.tres settings
 ├── Generation/
@@ -79,7 +78,7 @@ No new frame-processing scripts or external addons are introduced. The 4096 mast
 
 ## JSON and binary contract
 
-**Current export: Schema 9, generator version 7** (MAP2.2A-R2 geographic coastal corridors). JSON retains full signed 64-bit world seed as an exact string, coastline and islets, mountain ridge paths and coarse elevation. Additional `master_elevation` metadata describes the **separate** `map_concept_master_4096.r16` file, square resolution, row order, origin/step and proposed world scale. Each `mountain_ridges` entry now carries `local_detail_seed` and `detail_bounds`.
+**Current export: Schema 10, generator version 8** (MAP2.2A-R3 mainland-first thin rivers and final vector shores). JSON retains full signed 64-bit world seed as an exact string, coastline and islets, mountain ridge paths and coarse elevation. Additional `master_elevation` metadata describes the **separate** `map_concept_master_4096.r16` file, square resolution, row order, origin/step and proposed world scale. Each `mountain_ridges` entry now carries `local_detail_seed` and `detail_bounds`.
 
 The master elevation is **row-major top-to-bottom, little-endian normalized R16**; the accompanying water mask is **row-major R8** with 0 land / 1 ocean-connected water; 2 and 3 remain reserved. Ocean height is zero. No 16-million-element JSON arrays. The binary files are written only on explicit Export; keep JSON, R16 and R8 together. Existing schema-5 exports are not silently treated as high-resolution files.
 
@@ -88,11 +87,11 @@ The master elevation is **row-major top-to-bottom, little-endian normalized R16*
 1. Try seeds `254279584798`, `4594759834789` and the owner screenshot seed. R2 intentionally changes old geography. Follow water from the outer ocean through its narrowing channel; check continuous shoreline banks and connected basin/second mouth, including at deep zoom.
 2. Hide the side panel, press **R**, and verify the island is large and centred in the free viewport. Zoom in and out, including mountain zones; ensure panning is smooth without regenerating.
 3. Repeat the same seed/settings; compare final relief visually and exported R16 bytes. Change only mountain sliders; coastlines must remain fixed.
-4. Export and confirm JSON, a 33,554,432-byte R16 file and a 16,777,216-byte R8 mask. Check **schema 9, generator version 7**, `coastal_channel`, `ending`, `connected_to` and branch `rejoins` IDs. Coastal points are sampled ocean-to-inland corridors, with sea-level surfaces.
+4. Export and confirm JSON, a 33,554,432-byte R16 file and a 16,777,216-byte R8 mask. Check **schema 10, generator version 8**, `coastal_channel`, `ending`, `connected_to` and branch `rejoins` IDs. Coastal points are sampled ocean-to-inland corridors, with sea-level surfaces.
 5. Restore Authored Preset and confirm unchanged named-by-number features. Check no new errors in Godot Output; confirm `WORLD/` scenes and source are untouched.
 
-**Verification:** The owner confirmed the original MAP2.2A ran in F6 and provided river-gap/colour screenshots. MAP2.2A-R2 has focused source checks only; no installed Godot/.NET compiler was available. Check several seeds, both route endings and extreme settings before marking R2 accepted.
+**Verification:** The owner confirmed the original MAP2.2A ran in F6 and provided river-gap/colour screenshots. MAP2.2A-R3 has focused source checks only; no installed Godot/.NET compiler was available. Check several seeds, both route endings and extreme settings before marking R3 accepted.
 
-### R2 visual acceptance
+### R3 owner F6 check
 
-Check 1 and 3 inlets, 0/100 reach and winding, 0/6 branches, and zero optional offshore islands. Through-channels must preserve both land halves; delta islands must not disappear merely because the optional island target is zero. Check mountain icons and contour strokes do not cover the water. The exported R8 ocean footprint and R16 zero-water footprint must match the illustrated shoreline, allowing raster/antialiasing edge differences. Switch to the authored preset and back. Exported paths are sampled corridor data; consumers must not smooth them again. Coastline polygons remain authoritative after contour sampling/simplification and drawing smoothing. If contour extraction fails completely, the pre-existing safe elliptical fallback contains no waterways; the status count reveals that case.
+Use True Random plus a few fixed seeds; include low reach/high winding and 1/3 requested rivers. Check long, narrow, repeated bends rather than short bays; pools only a little wider than channels; clear mouths and opposite outlets; mountain/contour clearance; retained land on both sides of through-rivers. Export schema 10/version 8 and confirm the R8/zero-R16 channel footprint follows the visible banks. Check both Random buttons still behave as documented, and the authored preset is unchanged. These visual/runtime checks have not been performed by the implementing environment; no extensive automated testing was run.

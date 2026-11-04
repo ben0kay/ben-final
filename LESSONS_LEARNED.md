@@ -42,3 +42,12 @@ Document only significant, reusable mistakes. Preserve an explicit difference be
 - **Source fix:** Construct one sampled sea-level network in the land-shaping stage, extract its banks as ordinary coast, preserve channel-separated land components and generate mountains afterward with shore clearance. Remove the separate procedural river painter/uphill walker. Export explicit coastal semantics and shared junction/rejoin data. R16 bathymetry remains unimplemented and is identified as such.
 - **Prevention:** Establish intended water topology and terrain ownership before implementing appearance. A line touching another line is not a shared geographic footprint. Preserve large land fragments when water cuts through a landmass; do not cap them with a decorative-island count.
 - **Verification needed:** C# build, owner F6 checks of banks/basin/opposite mouth/branches and mask consistency. Source and diff checks do not establish visual acceptance.
+
+
+## BW-MAP2.2A-R3 — Route inside actual land; do not design rivers as wide ocean cuts
+
+- **Owner-observed:** Seven True Random screenshots showed mostly broad bays and hollowed mainland centres. Two closer examples still had wide channels and oversized terminal pools.
+- **Confirmed source causes:** R2 routed broad analytic paths toward common central distances rather than routing through the selected mainland. Main half-widths 17–24, mouth half-widths up to 115 and pools 45–75 were too large. The 8-unit contour grid discouraged narrowing, and 17-unit bank strokes would obscure narrow channels.
+- **Source correction:** Complete/select the mainland first; use bounded mainland-only A* segments through alternating guides, then validate and vector-cut thin rivers. Main half-widths 2.8–4, pools 9–12, short flares only. Share canonical cut polygons for drawing/raster/export; narrow shoreline strokes. Place mountains afterward and keep icons/contours off water.
+- **Prevention:** Measure water width relative to land and follow the requested generation order. Do not widen a feature just to fit a coarse grid. Plan routes against actual land and preserve thin bank geometry across render/export stages.
+- **Verification:** Source review only. C# build and owner F6 shape approval remain pending; no extensive testing.

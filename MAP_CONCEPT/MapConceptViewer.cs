@@ -323,15 +323,15 @@ public partial class MapConceptViewer : Node2D
         _peninsulaText.Text = $"Peninsula branching: {(int)_peninsulas.Value}%";
         _isletsText.Text = $"Offshore islands requested: {(int)_islets.Value}";
         _complexityText.Text = $"Landmass complexity: {(int)_complexity.Value}%";
-        _oceanText.Text = $"Ocean penetration: {(int)_ocean.Value}%";
+        _oceanText.Text = $"Ocean mouth widening: {(int)_ocean.Value}%";
         _mountainMinText.Text = $"Minimum mountain ranges: {(int)_mountainMin.Value}";
         _mountainMaxText.Text = $"Maximum mountain ranges: {(int)_mountainMax.Value}";
         _mountainCoverageText.Text = $"Mountain coverage: {(int)_mountainCoverage.Value}%";
         _ruggednessText.Text = $"Mountain ruggedness: {(int)_ruggedness.Value}%";
         _ridgeLengthText.Text = $"Ridge length: {(int)_ridgeLength.Value}%";
-        _inletsText.Text = $"Major ocean inlets: {(int)_inlets.Value}";
-        _reachText.Text = $"Inland channel reach: {(int)_riverReach.Value}%";
-        _windingText.Text = $"Channel meandering: {(int)_riverWinding.Value}%";
+        _inletsText.Text = $"Main rivers requested: {(int)_inlets.Value}";
+        _reachText.Text = $"Inland river reach: {(int)_riverReach.Value}%";
+        _windingText.Text = $"River meandering: {(int)_riverWinding.Value}%";
         _tributariesText.Text = $"Maximum joining branches: {(int)_tributaries.Value}";
     }
 
@@ -464,3 +464,4 @@ public partial class MapConceptViewer : Node2D
     }
     #endregion
 }
+

@@ -1,11 +1,11 @@
-// BW-MAP2.0B coordinator: preserves the existing generation order and quality scoring.
+// MAP coordinator: select mainland, cut routed rivers, then mountains/master.
 using System;
 using System.Collections.Generic;
 using Godot;
 
 public static class MapConceptGenerator
 {
-    public const int GeneratorVersion = 7;
+    public const int GeneratorVersion = 8;
     private const int MaxAttempts = 5;
 
     #region Generation
@@ -35,15 +35,10 @@ public static class MapConceptGenerator
             if (bounds.Size.X < 450f || bounds.Size.Y < 270f) score *= 0.45f;
 
             var candidate = MapConceptLayout.CreateProcedural(coast);
-            candidate.Waterways.AddRange(field.ExportWaterways());
-            // Through-channels and anabranches can split significant land.
-            // Preserve ALL resulting components, regardless of the optional
-            // offshore-islet request; never erase the other half of the island.
+            // Preserve natural land fragments independently of the optional
+            // offshore-island target. Water cuts happen only after selection.
             for (int i = 1; i < contours.Count; i++)
                 candidate.Islets.Add(contours[i]);
-
-            var extraRandom = new MapConceptSeedStream(state ^ 0xD81956A02D35803FUL);
-            MapConceptOffshoreIslands.AddOffshoreIslands(candidate, parameters.OffshoreIslands, ref extraRandom);
 
             if (score > bestScore)
             {
@@ -56,12 +51,7 @@ public static class MapConceptGenerator
 
         // Explicit procedural-only safety fallback. Never accidentally attach
         // authored forests or towns to a procedural coastline.
-        if (best != null)
-        {
-            MapConceptMountainGenerator.Populate(best, parameters);
-            MapConceptMasterGenerator.Populate(best, parameters.Seed);
-            return best;
-        }
+        if (best != null) return Finish(best, parameters);
         var safeCoast = new Vector2[96];
         for (int i = 0; i < safeCoast.Length; i++)
         {
@@ -70,11 +60,20 @@ public static class MapConceptGenerator
                 Mathf.Sin(angle) * 255f);
         }
         var fallback = MapConceptLayout.CreateProcedural(safeCoast);
-        // A degenerate coast has no carved channel; preserve a safe coastline
-        // rather than inventing an inlet disconnected from the sea.
-        MapConceptMountainGenerator.Populate(fallback, parameters);
-        MapConceptMasterGenerator.Populate(fallback, parameters.Seed);
-        return fallback;
+        return Finish(fallback, parameters);
+    }
+
+    // =========================================================
+    // Explicit stages: approve mainland shape, route/cut rivers, add optional
+    // offshore islets, then generate mountains/elevation and the master raster.
+    private static MapConceptLayout Finish(MapConceptLayout mainland, MapConceptParameters parameters)
+    {
+        MapConceptLayout map = MapConceptWaterGenerator.Populate(mainland, parameters);
+        var random = new MapConceptSeedStream(unchecked((ulong)parameters.Seed) ^ 0xD81956A02D35803FUL);
+        MapConceptOffshoreIslands.AddOffshoreIslands(map, parameters.OffshoreIslands, ref random);
+        MapConceptMountainGenerator.Populate(map, parameters);
+        MapConceptMasterGenerator.Populate(map, parameters.Seed);
+        return map;
     }
 
     // =========================================================
@@ -93,3 +92,4 @@ public static class MapConceptGenerator
     }
     #endregion
 }
+

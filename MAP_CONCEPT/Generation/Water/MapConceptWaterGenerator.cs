@@ -1,131 +1,172 @@
-// MAP2.2A-R2: one sea-connected inlet/channel network shapes land BEFORE mountains.
-// These are sea-level geographic corridors, not simulated freshwater drainage.
+// MAP2.2A-R3: route long, thin meanders across an already selected mainland.
+// Narrow channels and modest pools are cut before mountains, never drawn on top.
 using System;
 using System.Collections.Generic;
 using Godot;
 
 internal static class MapConceptWaterGenerator
 {
-    #region Coastal network
+    private const ulong WaterSalt = 0x71B2C59D8453EA10UL;
 
     // =========================================================
-    public static List<ConceptWaterway> CreateNetwork(MapConceptParameters settings,
-        Vector2 centre, Func<Vector2, float> baseLand, ref MapConceptSeedStream random)
+    public static MapConceptLayout Populate(MapConceptLayout mainland, MapConceptParameters settings)
     {
-        var result = new List<ConceptWaterway>();
+        var random = new MapConceptSeedStream(unchecked((ulong)settings.Seed) ^ WaterSalt);
+        var router = new MapConceptRiverRouter(mainland);
+        var land = new List<Vector2[]> { MapConceptDrawingGeometry.SmoothClosed(mainland.Coast, 2) };
+        foreach (Vector2[] island in mainland.Islets)
+            land.Add(MapConceptDrawingGeometry.SmoothClosed(island, 2));
+        var waterways = new List<ConceptWaterway>();
         float phase = random.Range(0f, Mathf.Tau);
-        float penetration = settings.OceanPenetration / 100f;
-        float reach = settings.RiverReach / 100f;
-        float winding = settings.RiverWinding / 100f;
-        int branchNumber = 0;
+        float reach = settings.RiverReach / 100f, winding = settings.RiverWinding / 100f;
+        int branches = 0;
+        float span = MapConceptGeometry.Bounds(mainland.Coast).Size.Length();
         for (int number = 1; number <= settings.MajorOceanInlets; number++)
+        for (int attempt = 0; attempt < 8; attempt++)
         {
-            float angle = phase + Mathf.Tau * (number - 1 + random.Range(-0.15f, 0.15f)) /
-                settings.MajorOceanInlets;
-            Vector2 direction = new(Mathf.Cos(angle), Mathf.Sin(angle));
-            Vector2 side = new(-direction.Y, direction.X);
-            bool through = reach >= 0.55f && random.Range(0f, 1f) < 0.35f;
-            float end = through ? -1000f : Mathf.Lerp(100f, -220f, reach);
-            float bend = random.Range(-110f, 110f) * (0.35f + penetration * 0.65f);
-            float wiggle = random.Range(35f, 85f) * winding;
-            float channelWidth = random.Range(17f, 24f);
-            float basinWidth = random.Range(45f, 75f);
-            // A basin ends inside the pre-water landmass, with room for banks.
-            // Pull its endpoint toward the guaranteed central core if needed.
-            if (!through)
-                for (int retry = 0; retry < 6 &&
-                    baseLand(centre + direction * end) < basinWidth + 24f; retry++)
-                    end *= 0.5f;
-            const int Count = 81;
-            var points = new Vector2[Count];
-            var widths = new float[Count];
-            int junction = 1;
-            for (int i = 0; i < Count; i++)
+            float angle = phase + Mathf.Tau * (number - 1f) / settings.MajorOceanInlets +
+                random.Range(-0.35f, 0.35f);
+            Vector2 outward = Vector2.FromAngle(angle);
+            Vector2 mouth = router.Mouth(outward);
+            bool through = random.Range(0f, 1f) < 0.40f + reach * 0.35f;
+            Vector2 exitDirection = Vector2.FromAngle(angle + Mathf.Pi + random.Range(-0.3f, 0.3f));
+            Vector2 end = through ? router.Mouth(exitDirection) :
+                mouth.Lerp(router.FarInterior(mouth), Mathf.Lerp(0.65f, 0.95f, reach));
+            if (mouth.DistanceTo(end) < Mathf.Max(200f, span * 0.35f)) continue;
+            List<Vector2> path = router.Meander(mouth - outward * 24f,
+                through ? end - exitDirection * 24f : end, winding, ref random);
+            path = RemoveLoops(path);
+            if (path.Count < 12) continue;
+            Vector2[] interior = SampleCurve(MapConceptDrawingGeometry.SmoothOpen(path.ToArray(), 3));
+            var points = new List<Vector2>(interior.Length + 4) { mouth + outward * 24f, mouth };
+            points.AddRange(interior);
+            if (through) { points.Add(end); points.Add(end + exitDirection * 24f); }
+            float length = PathLength(points);
+            if (length < Mathf.Max(300f, span * 0.55f)) continue;
+
+            float width = random.Range(2.8f, 4.0f);
+            float pool = random.Range(9f, 12f);
+            var widths = new float[points.Count];
+            float distance = 0f;
+            int split = 1;
+            bool valid = true;
+            for (int i = 0; i < points.Count; i++)
             {
-                float t = i / (Count - 1f);
-                float distance = Mathf.Lerp(1000f, end, t);
-                float inland = Mathf.Clamp((650f - distance) / 420f, 0f, 1f);
-                float envelope = Mathf.Sin(t * Mathf.Pi);
-                points[i] = centre + direction * distance + side * envelope *
-                    (bend + wiggle * Mathf.Sin(t * Mathf.Pi * (through ? 5f : 3f)));
-                // A broad estuary tapers into the SAME channel, with gentle
-                // width variation. All widths survive the 8-unit contour grid.
-                float width = Mathf.Lerp(85f + penetration * 30f, channelWidth, inland);
-                width += Mathf.Sin(t * 7f * Mathf.Pi) * 2.5f * inland;
-                if (through)
-                    width = Mathf.Lerp(width, 85f, Mathf.SmoothStep(0f, 1f,
-                        Mathf.Clamp((-distance - 280f) / 420f, 0f, 1f)));
-                else
-                    width = Mathf.Lerp(width, basinWidth,
-                        Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.87f) / 0.13f, 0f, 1f)));
-                widths[i] = width;
-                if (distance > Mathf.Lerp(300f, 210f, penetration)) junction = i;
+                if (i > 0) distance += points[i].DistanceTo(points[i - 1]);
+                float radius = width * (0.92f + 0.08f * Mathf.Sin(distance / 27f));
+                // Only the immediate coastal mouth widens; no map-wide bay.
+                radius = Mathf.Lerp(14f + settings.OceanPenetration * 0.04f, radius,
+                    Mathf.Clamp(distance / 65f, 0f, 1f));
+                float remaining = length - distance;
+                if (through) radius = Mathf.Lerp(14f, radius, Mathf.Clamp(remaining / 65f, 0f, 1f));
+                else radius = Mathf.Lerp(pool, radius, Mathf.Clamp(remaining / 18f, 0f, 1f));
+                widths[i] = radius;
+                if (distance < 65f) split = i;
+                if (distance > 65f && (!through || remaining > 65f) &&
+                    mainland.ShoreClearance(points[i]) < radius + 2f) valid = false;
             }
-
-            // Sample the WHOLE path once, then split only its labels/data.
-            // Shared endpoint, tangent and width prevent an inlet/river seam.
-            var whole = new ConceptWaterway(ConceptWaterKind.OceanInlet, number,
-                points, widths, new float[Count]);
-            MapConceptWaterSample[] samples = MapConceptWaterGeometry.Smooth(whole);
-            int split = junction * MapConceptWaterGeometry.SamplesPerSegment;
-            var inlet = Section(samples, 0, split, ConceptWaterKind.OceanInlet, number)
-                with { CoastalChannel = true };
-            var river = Section(samples, split, samples.Length - 1,
-                ConceptWaterKind.River, number) with
-                {
-                    CoastalChannel = true, ConnectedWaterwayId = inlet.Id,
-                    Ending = through ? ConceptWaterEnding.OppositeCoast : ConceptWaterEnding.ConnectedBasin
-                };
-            result.Add(inlet);
-            result.Add(river);
-
-            // Optional anabranches reconnect to the trunk at BOTH ends. The
-            // enclosed land survives contour extraction as a delta-like island.
-            int branches = random.NextInt(0, settings.MaxTributaries + 1);
-            for (int b = 0; b < branches; b++)
+            if (!valid) continue;
+            var whole = new ConceptWaterway(ConceptWaterKind.River, number,
+                points.ToArray(), widths, new float[points.Count]) { CoastalChannel = true };
+            if (!MapConceptWaterCutout.TryApply(land, whole, out var cut)) continue;
+            land = cut;
+            var inlet = Section(whole, 0, split, ConceptWaterKind.OceanInlet, number);
+            var river = Section(whole, split, points.Count - 1, ConceptWaterKind.River, number) with
             {
-                int start = Math.Max(0, split - 64 + b * 12);
-                int finish = Math.Min(samples.Length - 1, split + 90 + b * 12);
-                Vector2 a = samples[start].Position, z = samples[finish].Position;
-                Vector2 tangent = (z - a).Normalized();
+                ConnectedWaterwayId = inlet.Id,
+                Ending = through ? ConceptWaterEnding.OppositeCoast : ConceptWaterEnding.ConnectedBasin
+            };
+            waterways.Add(inlet);
+            waterways.Add(river);
+
+            // Small reconnecting side channels, rather than broad banana cuts.
+            int wanted = random.NextInt(0, settings.MaxTributaries + 1);
+            for (int b = 0; b < wanted; b++)
+            {
+                int a = Math.Min(points.Count - 2, split + 12 + b * 20);
+                int z = Math.Min(points.Count - 2, a + 25);
+                if (z - a < 12) continue;
+                Vector2 tangent = (points[z] - points[a]).Normalized();
                 Vector2 normal = new(-tangent.Y, tangent.X);
-                float offset = (b % 2 == 0 ? 1f : -1f) * random.Range(65f, 100f);
-                var branchPoints = new Vector2[25];
-                var branchWidths = new float[25];
+                var branchPoints = new Vector2[33];
+                var branchWidths = new float[33];
+                bool clear = true;
+                float offset = (b % 2 == 0 ? 1f : -1f) * random.Range(15f, 24f);
                 for (int j = 0; j < branchPoints.Length; j++)
                 {
                     float t = j / (branchPoints.Length - 1f);
-                    branchPoints[j] = a.Lerp(z, t) + normal * offset * Mathf.Sin(t * Mathf.Pi);
-                    branchWidths[j] = Mathf.Lerp(samples[start].HalfWidth,
-                        samples[finish].HalfWidth, t) * (1f - 0.35f * Mathf.Sin(t * Mathf.Pi));
+                    branchPoints[j] = points[a].Lerp(points[z], t) + normal * offset * Mathf.Sin(t * Mathf.Pi);
+                    branchWidths[j] = width * 0.7f;
+                    if (mainland.ShoreClearance(branchPoints[j]) < width + 4f) clear = false;
                 }
-                var branch = new ConceptWaterway(ConceptWaterKind.Tributary, ++branchNumber,
-                    branchPoints, branchWidths, new float[branchPoints.Length]);
-                MapConceptWaterSample[] smooth = MapConceptWaterGeometry.Smooth(branch);
-                result.Add(Section(smooth, 0, smooth.Length - 1,
-                    ConceptWaterKind.Tributary, branchNumber) with
-                    {
-                        CoastalChannel = true, ConnectedWaterwayId = inlet.Id,
-                        RejoinsWaterwayId = river.Id, Ending = ConceptWaterEnding.RejoinsChannel
-                    });
+                if (!clear) continue;
+                var branch = new ConceptWaterway(ConceptWaterKind.Tributary, branches + 1,
+                    branchPoints, branchWidths, new float[33])
+                {
+                    CoastalChannel = true, ConnectedWaterwayId = river.Id,
+                    RejoinsWaterwayId = river.Id, Ending = ConceptWaterEnding.RejoinsChannel
+                };
+                if (!MapConceptWaterCutout.TryApply(land, branch, out cut)) continue;
+                land = cut;
+                waterways.Add(branch);
+                branches++;
             }
+            break;
         }
+        land.Sort((a, b) => MapConceptGeometry.PolygonArea(b).CompareTo(MapConceptGeometry.PolygonArea(a)));
+        var result = MapConceptLayout.CreateProcedural(land[0]);
+        result.FinalShoreline = true;
+        for (int i = 1; i < land.Count; i++) result.Islets.Add(land[i]);
+        result.Waterways.AddRange(waterways);
         return result;
     }
 
     // =========================================================
-    private static ConceptWaterway Section(MapConceptWaterSample[] samples,
-        int start, int end, ConceptWaterKind kind, int number)
+    // Keep smooth curves without exporting/clipping thousands of redundant
+    // near-identical vertices. This does not change the whole-map grid size.
+    private static Vector2[] SampleCurve(Vector2[] source)
+    {
+        var result = new List<Vector2> { source[0] };
+        for (int i = 1; i < source.Length - 1; i++)
+            if (source[i].DistanceSquaredTo(result[^1]) >= 9f) result.Add(source[i]);
+        result.Add(source[^1]);
+        return result.ToArray();
+    }
+
+    // =========================================================
+    private static List<Vector2> RemoveLoops(List<Vector2> source)
+    {
+        var path = new List<Vector2>();
+        var seen = new Dictionary<Vector2, int>();
+        foreach (Vector2 point in source)
+        {
+            if (seen.TryGetValue(point, out int previous))
+            {
+                for (int i = path.Count - 1; i > previous; i--) seen.Remove(path[i]);
+                path.RemoveRange(previous + 1, path.Count - previous - 1);
+            }
+            else { seen.Add(point, path.Count); path.Add(point); }
+        }
+        return path;
+    }
+
+    // =========================================================
+    private static float PathLength(List<Vector2> points)
+    {
+        float length = 0f;
+        for (int i = 1; i < points.Count; i++) length += points[i - 1].DistanceTo(points[i]);
+        return length;
+    }
+
+    // =========================================================
+    private static ConceptWaterway Section(ConceptWaterway source, int start,
+        int end, ConceptWaterKind kind, int number)
     {
         int count = end - start + 1;
         var points = new Vector2[count];
         var widths = new float[count];
-        for (int i = 0; i < count; i++)
-        {
-            points[i] = samples[start + i].Position;
-            widths[i] = samples[start + i].HalfWidth;
-        }
-        return new ConceptWaterway(kind, number, points, widths, new float[count]);
+        Array.Copy(source.Points, start, points, 0, count);
+        Array.Copy(source.HalfWidths, start, widths, 0, count);
+        return new ConceptWaterway(kind, number, points, widths, new float[count]) { CoastalChannel = true };
     }
-    #endregion
 }

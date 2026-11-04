@@ -28,7 +28,7 @@ internal sealed class MapConceptNaturalPainter
         if (Layout.MasterElevation?.ReliefTexture is ImageTexture relief)
             Canvas.DrawTextureRect(relief, Layout.MasterElevation.MapRect, false);
         if (Layout.Elevation != null)
-            new MapConceptElevationPainter(Canvas, Layout.Elevation).Draw();
+            new MapConceptElevationPainter(Canvas, Layout).Draw();
         DrawGroundMarks();
         DrawForests();
         DrawMountains();
@@ -64,12 +64,12 @@ internal sealed class MapConceptNaturalPainter
     // =========================================================
     private void DrawIsland(Vector2[] anchors)
     {
-        Vector2[] coast = MapConceptDrawingGeometry.SmoothClosed(anchors, 2);
+        Vector2[] coast = Layout.FinalShoreline ? anchors : MapConceptDrawingGeometry.SmoothClosed(anchors, 2);
         // Sand-coloured coastal apron and two hand-inked strokes around each island.
-        Canvas.DrawPolyline(MapConceptDrawingGeometry.Close(coast), new Color(0.98f, 0.94f, 0.76f, 0.84f), 17f, true);
+        Canvas.DrawPolyline(MapConceptDrawingGeometry.Close(coast), new Color(0.98f, 0.94f, 0.76f, 0.84f), Layout.FinalShoreline ? 3.2f : 17f, true);
         Canvas.DrawColoredPolygon(coast, Parchment);
-        Canvas.DrawPolyline(MapConceptDrawingGeometry.Close(coast), new Color(0.54f, 0.47f, 0.32f, 0.55f), 4.5f, true);
-        Canvas.DrawPolyline(MapConceptDrawingGeometry.Close(coast), new Color(0.94f, 0.91f, 0.69f), 1.6f, true);
+        Canvas.DrawPolyline(MapConceptDrawingGeometry.Close(coast), new Color(0.54f, 0.47f, 0.32f, 0.55f), Layout.FinalShoreline ? 1.2f : 4.5f, true);
+        Canvas.DrawPolyline(MapConceptDrawingGeometry.Close(coast), new Color(0.94f, 0.91f, 0.69f), Layout.FinalShoreline ? 0.65f : 1.6f, true);
     }
 
     // =========================================================
@@ -213,3 +213,4 @@ internal sealed class MapConceptNaturalPainter
     }
     #endregion
 }
+

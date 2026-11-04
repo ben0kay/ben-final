@@ -18,8 +18,6 @@ internal sealed class MapConceptLandField : IDisposable
     private readonly FastNoiseLite _macro, _detail, _warpX, _warpY;
     private readonly List<Ellipse> _lands = new();
     private readonly List<PathShape> _arms = new();
-    private readonly MapConceptWaterFootprint _water;
-    private readonly List<ConceptWaterway> _waterways;
     private readonly float _roughness, _complexity, _unionSmooth;
     private readonly Vector2 _centre;
 
@@ -80,22 +78,11 @@ internal sealed class MapConceptLandField : IDisposable
             }
             _arms.Add(new PathShape(points));
         }
-
-        // Water is geographic negative space, before contour extraction or
-        // elevation. Export these exact sampled corridors for future 3D use.
-        _waterways = MapConceptWaterGenerator.CreateNetwork(p, _centre, SampleBase, ref rng);
-        _water = new MapConceptWaterFootprint(_waterways);
     }
 
     // =========================================================
-    public List<ConceptWaterway> ExportWaterways() => new(_waterways);
-
-    // =========================================================
-    public float Sample(Vector2 position) =>
-        Mathf.Min(SampleBase(position), -_water.Sample(position));
-
-    // =========================================================
-    private float SampleBase(Vector2 position)
+    // Mainland only. Rivers are routed after a candidate coastline is chosen.
+    public float Sample(Vector2 position)
     {
         float warp = 14f + _roughness * 44f + _complexity * 25f;
         Vector2 point = position + new Vector2(
@@ -176,3 +163,4 @@ internal sealed class MapConceptLandField : IDisposable
         _warpY.Dispose();
     }
 }
+

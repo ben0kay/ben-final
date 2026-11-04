@@ -19,10 +19,10 @@ internal static class MapConceptMasterGenerator
         long globalDetailSeed = unchecked(worldSeed ^ (long)GlobalDetailSalt);
         var crossings = new List<float>(128);
 
-        RasterizeLand(master, map.Coast, map.Elevation, map.MountainRidges,
+        RasterizeLand(master, map.Coast, map.FinalShoreline, map.Elevation, map.MountainRidges,
             ridgeOwners, globalDetailSeed, crossings);
         foreach (Vector2[] island in map.Islets)
-            RasterizeLand(master, island, map.Elevation, map.MountainRidges,
+            RasterizeLand(master, island, map.FinalShoreline, map.Elevation, map.MountainRidges,
                 ridgeOwners, globalDetailSeed, crossings);
 
         MapConceptWaterCarver.Apply(master);
@@ -33,11 +33,11 @@ internal static class MapConceptMasterGenerator
     // =========================================================
     // Polygon scan conversion tests only boundary edges per row, not every
     // coast vertex for every one of 16.8 million pixels.
-    private static void RasterizeLand(MapConceptMasterElevation master, Vector2[] polygon,
+    private static void RasterizeLand(MapConceptMasterElevation master, Vector2[] polygon, bool finalShoreline,
         MapConceptElevationGrid preview, List<ConceptMountainRidge> ridges,
         int[] owners, long globalSeed, List<float> crossings)
     {
-        Vector2[] coast = MapConceptDrawingGeometry.SmoothClosed(polygon, 2);
+        Vector2[] coast = finalShoreline ? polygon : MapConceptDrawingGeometry.SmoothClosed(polygon, 2);
         float mapStart = MapConceptMasterElevation.Origin.X;
         float step = MapConceptMasterElevation.Step;
         for (int y = 0; y < MapConceptMasterElevation.Resolution; y++)
@@ -199,3 +199,4 @@ internal static class MapConceptMasterGenerator
     }
     #endregion
 }
+

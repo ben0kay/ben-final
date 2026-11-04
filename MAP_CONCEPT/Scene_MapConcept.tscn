@@ -42,13 +42,13 @@ theme_override_font_sizes/font_size = 21
 
 [node name="Subheading" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "BW-MAP2.2A  —  INLETS + RIVERS"
+text = "BW-MAP2.2A-R3  —  WINDING RIVERS"
 theme_override_font_sizes/font_size = 14
 
 [node name="Description" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
 autowrap_mode = 3
-text = "Seeded major saltwater basins, inland rivers and tributaries with 4096 elevation carving. Lakes come next."
+text = "Mainland first, then thin winding rivers and modest pools, then mountains. Isolated lakes come next."
 
 [node name="Navigation" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
@@ -131,7 +131,7 @@ value = 65.0
 
 [node name="OceanLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "Ocean penetration: 65%"
+text = "Ocean mouth widening: 65%"
 
 [node name="OceanSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
@@ -213,12 +213,12 @@ value = 55.0
 
 [node name="WaterSection" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "OCEAN INLETS + FRESHWATER"
+text = "RIVER CHANNEL SETTINGS"
 theme_override_font_sizes/font_size = 14
 
 [node name="MajorInletsLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "Major ocean inlets: 1"
+text = "Main rivers requested: 1"
 
 [node name="MajorInletsSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
@@ -229,7 +229,7 @@ value = 1.0
 
 [node name="RiverReachLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "Inland channel reach: 70%"
+text = "Inland river reach: 70%"
 
 [node name="RiverReachSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
@@ -239,7 +239,7 @@ value = 70.0
 
 [node name="RiverWindingLabel" type="Label" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
-text = "Channel meandering: 65%"
+text = "River meandering: 65%"
 
 [node name="RiverWindingSlider" type="HSlider" parent="UI/SidePanel/PanelScroll/Contents"]
 layout_mode = 2
@@ -304,3 +304,4 @@ offset_top = 17.0
 offset_right = 486.0
 offset_bottom = 50.0
 text = "Hide settings"
+

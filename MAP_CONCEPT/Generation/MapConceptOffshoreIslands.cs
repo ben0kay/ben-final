@@ -47,7 +47,8 @@ internal static class MapConceptOffshoreIslands
                         { clear = false; break; }
                 if (!clear) break;
             }
-            if (clear) map.Islets.Add(ring);
+            if (clear) map.Islets.Add(map.FinalShoreline ?
+                MapConceptDrawingGeometry.SmoothClosed(ring, 2) : ring);
         }
     }
 
@@ -68,3 +69,4 @@ internal static class MapConceptOffshoreIslands
 
     #endregion
 }
+

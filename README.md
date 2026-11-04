@@ -111,8 +111,8 @@ For example, a zombie's identity, health, senses, movement state, attacks, leade
 
 - **MAP2.0B:** Seeded shaped mainland, winding coastline/ocean inlets and offshore islets, using FastNoiseLite and marching squares.
 - **MAP2.1 / 2.1B:** Seeded numbered mountain ranges, broad elevation and 4096×4096 normalized R16 master terrain on a provisional 12×12 km map, cached relief, local mountain detail seeds and deep zoom.
-- **MAP2.2A-R2:** The owner's clarified river is a **continuous sea-level ocean inlet narrowing inland**, ending in a connected basin or reaching the opposite coast, with optional delta-like joining branches. The whole corridor now cuts the land before coastline extraction, elevation and mountains. Normal shoreline banks replace the independent blue river stroke, and split land components are preserved. **Source implemented; C#/F6 validation pending.**
-- **Export:** JSON **schema 9**, generator **version 7**, sampled coastal corridors with parent/rejoin IDs and ending metadata; separate **R16 elevation** and **R8 water mask**. Coastal channels and connected basins are ocean class 1; R16 does not yet encode underwater depth. This version intentionally changes old seed geography.
+- **MAP2.2A-R3:** Owner rejected broad bay-like R2 rivers. Generation now selects **mainland first**, routes **long thin winding rivers** through it, cuts modest pools or opposite ocean mouths, then places mountains. Vector-cut shoreline geometry is shared with rendering and the master without separate smoothing. **Source implemented; C#/F6 validation pending.**
+- **Export:** JSON **schema 10**, generator **version 8**, final shoreline polygons and sampled river corridors with parent/rejoin IDs and ending metadata; separate R16 elevation/R8 water mask. These remain sea-level connected concept channels, not simulated freshwater or bathymetry.
 - **Upcoming:** MAP2.2B inland lakes, MAP2.3 biomes/forests, MAP2.4 towns/cities/POIs, then a future approved `WORLD_CONCEPT/` 3D fly-around translation. The water-route algorithm is a deterministic concept planner, **not yet a complete downhill drainage or lake/flood simulation**.
 
 Owned guide: [MAP_CONCEPT/README.md](MAP_CONCEPT/README.md). Milestones: [MAP_CONCEPT/IMPLEMENTATION_PLAN.md](MAP_CONCEPT/IMPLEMENTATION_PLAN.md).
@@ -291,7 +291,8 @@ The terrain vision is **a coherent finite island**: varied coastline and ocean, 
 | **BW-MAP2.1B** | 4096-square island master blueprint | 12-km square 4096² R16 elevation, cached relief, mountain-local seed metadata, 32× zoom, panel-aware fitting and schema-6 export | **Implemented in source — awaiting Godot C#/F6 validation** |
 | **BW-MAP2.2A** | Major ocean inlets and freshwater rivers | Seeded inlet carving, waterway IDs, meanders/tributaries, 4096 riverbed carving and R8 mask | **Owner F6-tested; river gaps and blocky visuals observed** |
 | **BW-MAP2.2A-R1** | Shoreline confluence and river visual repair | Matching colour and outlet geometry | **Superseded by clarified R2 geographic channel approach** |
-| **BW-MAP2.2A-R2** | Continuous inlet/channel geography | Sea-level corridors, basin/opposite mouth, joining branches, shared shoreline and retained split land | **Implemented in source — awaiting C#/F6 validation** |
+| **BW-MAP2.2A-R2** | Continuous inlet/channel geography | Broad sea-level corridors | **Owner rejected overly wide/bay-like results** |
+| **BW-MAP2.2A-R3** | Long thin winding rivers | Mainland-first routing, small pools/opposite mouths, canonical vector shores, mountains afterward | **Source implemented — awaiting C#/F6** |
 | **BW-MAP2.2B–MAP2.5** | Lakes, biomes, settlements and polish | Inland lakes, forests, towns/cities/roads/POIs and quality acceptance | **Planned** |
 | **BW-W4.0** | Streaming measurement baseline | F1 manual capture and fixed 60/180 m/s fly routes, frame-time histogram (median/P95/P99/worst), GC and terrain timing breakdown | **Implemented in source — awaiting Godot validation** |
 | **BW-W4** | Streaming and LOD | Camera-centred terrain residency, bounded load/unload queues, collision readiness, distance LOD and transitions; current preview still retains all generated chunks | **Planned — next priority** |
@@ -360,3 +361,4 @@ Aim for **smooth FPS without stalling when crossing chunk boundaries**, but benc
 ## Instructions for future contributors and AI agents
 
 Read **AGENTS.md**, **CodePreferences.md**, this README, **WORLD/WORLD_AUTHORING.md** for any terrain/biome/vegetation/world change, and the owning feature documents before making changes. Respect the planned-versus-implemented distinction, feature ownership, minimal testing policy, and project branch permissions. Propose focused steps, avoid unrelated rewrites, and keep project plans updated as milestones become real.
+

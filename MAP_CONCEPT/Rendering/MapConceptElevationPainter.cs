@@ -6,11 +6,13 @@ internal sealed class MapConceptElevationPainter
 {
     private readonly MapConceptArt _canvas;
     private readonly MapConceptElevationGrid _grid;
+    private readonly MapConceptLayout _layout;
 
-    public MapConceptElevationPainter(MapConceptArt canvas, MapConceptElevationGrid grid)
+    public MapConceptElevationPainter(MapConceptArt canvas, MapConceptLayout layout)
     {
         _canvas = canvas;
-        _grid = grid;
+        _layout = layout;
+        _grid = layout.Elevation!;
     }
 
     // =========================================================
@@ -51,9 +53,20 @@ internal sealed class MapConceptElevationPainter
                     float t = (level - heights[edge]) / (heights[next] - heights[edge]);
                     crossings[count++] = corners[edge].Lerp(corners[next], t);
                 }
-                if (count >= 2) _canvas.DrawLine(crossings[0], crossings[1], ink, 1.15f, true);
-                if (count == 4) _canvas.DrawLine(crossings[2], crossings[3], ink, 1.15f, true);
+                if (count >= 2) DrawOnLand(crossings[0], crossings[1], ink);
+                if (count == 4) DrawOnLand(crossings[2], crossings[3], ink);
             }
         }
     }
+    // =========================================================
+    // The overview grid is coarser than thin channels. Clip its decorative
+    // contour strokes to final land rather than letting them cross the water.
+    private void DrawOnLand(Vector2 a, Vector2 b, Color colour)
+    {
+        for (int i = 0; i <= 8; i++)
+            if (!_layout.IsOnLand(a.Lerp(b, i / 8f))) return;
+        _canvas.DrawLine(a, b, colour, 1.15f, true);
+    }
+
 }
+

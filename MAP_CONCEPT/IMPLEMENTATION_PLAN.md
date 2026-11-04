@@ -13,7 +13,8 @@
 | **BW-MAP2.1B** | **4096×4096 master elevation** on a proposed 12×12 km square map, high-detail shaded-relief image, more usable framing/zoom, bounded mountain-local detail seeds, R16+JSON export | **Implemented in source; Godot C#/F6 validation pending** |
 | **BW-MAP2.2A** | Sea inlets, freshwater rivers, tributaries, carving and water mask | **Owner tested F6; disconnected rivers and blocky drawing found** |
 | **BW-MAP2.2A-R1** | Coast-validated outlets and matching river colour | **Superseded: owner clarified that water must shape land, not overlay it** |
-| **BW-MAP2.2A-R2** | Unified sea-level inlet/channel corridor, connected basin or opposite mouth, delta-like joining branches, shared shoreline and land-component preservation | **Implemented in source; C#/F6 validation pending** |
+| **BW-MAP2.2A-R2** | Unified coastal corridors | **Owner rejected broad bays, wide channels and oversized pools** |
+| **BW-MAP2.2A-R3** | Mainland-first long thin winding rivers, small pools/opposite mouths, vector bank cuts and mountains afterward | **Source implemented; build/F6 pending** |
 | **BW-MAP2.2B** | Standalone inland lakes, overflow and wetlands | **Planned** |
 | **BW-MAP2.3 — planned** | Forest zones, meadows, wetlands and biome suitability from elevation/moisture |
 | **BW-MAP2.4 — planned** | Variable towns/cities/roads and numbered POIs, placement feasibility and connectivity |
@@ -82,7 +83,7 @@ The 4096 master carves freshwater channels and blends their banks locally. It st
 - **Fix (source):** Scan out from an actual inlet sea point to the first mainland shore, bisect the real land/water boundary, then start upstream inland. Complete the waterway via the true shore and a short sea overlap. If no valid coast crossing exists, skip the river instead of rendering a detached feature. Main/tributary records export their parent waterway IDs. Use common Catmull-Rom centreline samples for the painter and raster carver, same ocean RGB and rounded water caps. Terrain export format remains R16 + R8.
 - **Validation needed:** Rebuild F6. Revisit the owner-provided disconnected River 2 seed if saved; test 1 and 3 ocean inlets, short/long river reach, high winding and several random seeds. For *each* displayed river, follow its downstream water path and verify it intersects its matching ocean inlet with no land-coloured gap. Zoom in to inspect smooth edges and matching sea blue; compare vector channels with R8 carving. Confirm no river is emitted for an unreachable inlet, no detached tributary ends, export schema 8/version 6 and JSON `connected_to` values. This remains a bounded elevation-guided river planner, not a full global hydrology simulation.
 
-## MAP2.2A-R2 — Geographic inlet/channel continuation (November 4, 2026)
+## MAP2.2A-R2 — Historical geographic corridor attempt (November 4, 2026)
 
 **Owner clarification:** “River” means a progressively narrowing continuation of ocean water winding inland, optionally branching, opening to the opposite coast or widening into a connected basin. Isolated lakes come next, after this shape is accepted.
 
@@ -93,3 +94,14 @@ The 4096 master carves freshwater channels and blends their banks locally. It st
 **Configuration/performance:** Existing MajorOceanInlets, RiverReach, RiverWinding and MaxTributaries fields remain compatible; visible labels describe channels and joining branches. At reach ≥55%, a seeded 35% choice allows an opposite-coast route; otherwise the route widens into a basin. Branch count remains bounded by the requested maximum. Generation is synchronous and on demand, with no new idle work; regeneration time and memory need owner observation.
 
 **Acceptance:** Use the MAP_CONCEPT README's R2 checks. Build C#, inspect continuous banks, both route endings, branch joins, mountain clearance, preserved land halves and exports at several seeds/extremes. Compilation and F6 appearance are unverified in the implementing environment. If acceptable, proceed to **MAP2.2B isolated lakes**, without changing WORLD or creating WORLD_CONCEPT yet.
+
+
+## MAP2.2A-R3 — Thin, long winding rivers (November 4, 2026)
+
+**Owner evidence:** Seven True Random screenshots. Most routes were broad sea bays; examples 3 and 6 were closer but still too wide and ended in excessive pools. Required order: complete mainland → long thin river cut → mountains.
+
+**Source changes:** Remove all water generation from `MapConceptLandField`. Select mainland before calling `MapConceptWaterGenerator.Populate`. Route with an on-demand A* grid and alternating inland guides; remove loops, smooth and check clearance. Widths are 2.8–4 map-unit half-widths, pools 9–12-unit radii. Short coastal flares replace large estuaries. Native vector subtraction preserves narrow channels independently of the coarse 8-unit coast grid. Land fragments survive. Final shoreline polygons are shared by rendering, raster, land tests and export, without additional smoothing. Narrow beach strokes keep water visible. Mountains are generated afterward and coarse decorative contours avoid water gaps. Optional branches are narrow local reconnections.
+
+**Export/config:** Schema 10 / generator 8, `shoreline_geometry = final_vector_cut`; ocean-connected masks remain class 1. Existing setting/property names persist; UI labels clarify mouth widening and river requests. Reach changes route extent/outlet probability but never deliberately creates a mere short bay. Bounded placement can yield fewer than requested rivers. Opposite-coast probability is seeded 40–75%, depending on reach. No isolated lakes, WORLD changes or 3D integration.
+
+**Validation:** Brief source review only; no .NET/Godot runtime available. Use the owning README's R3 F6 checks. Do not mark accepted from a push or source review alone. Isolated lakes remain next after owner approval of these river shapes.
