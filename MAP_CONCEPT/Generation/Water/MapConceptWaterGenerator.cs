@@ -112,9 +112,9 @@ internal static class MapConceptWaterGenerator
                         landEdge = mid;
                     else waterEdge = mid;
                 }
-                Vector2 coast = (waterEdge + landEdge) * 0.5f;
-                Vector2 start = coast + direction * 17f;
-                Vector2 overlap = coast - direction * 10f;
+                Vector2 shorePoint = (waterEdge + landEdge) * 0.5f;
+                Vector2 start = shorePoint + direction * 17f;
+                Vector2 overlap = shorePoint - direction * 10f;
                 // Avoid starting in a tiny peninsula or immediately re-entering sea.
                 if (!MapConceptLayout.PointInPolygon(start, coast) ||
                     !MapConceptLayout.PointInPolygon(start + direction * 12f, coast) ||
@@ -123,7 +123,7 @@ internal static class MapConceptWaterGenerator
                     break;
 
                 inlandStart = start;
-                shoreline = coast;
+                shoreline = shorePoint;
                 oceanOverlap = overlap;
                 heading = direction;
                 return true;
