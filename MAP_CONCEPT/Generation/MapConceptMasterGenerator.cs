@@ -25,7 +25,8 @@ internal static class MapConceptMasterGenerator
             RasterizeLand(master, island, map.Elevation, map.MountainRidges,
                 ridgeOwners, globalDetailSeed, crossings);
 
-        master.ReliefTexture = MakeRelief(master.Heights);
+        MapConceptWaterCarver.Apply(master, map);
+        master.ReliefTexture = MakeRelief(master.Heights, master.WaterMask);
         map.MasterElevation = master;
     }
 
@@ -163,7 +164,7 @@ internal static class MapConceptMasterGenerator
     // =========================================================
     // Single 4096² RGBA texture; ocean pixels remain fully transparent.
     // Height/edge lighting is deliberately subtle beneath cartographic icons.
-    private static ImageTexture MakeRelief(ushort[] heights)
+    private static ImageTexture MakeRelief(ushort[] heights, byte[] water)
     {
         const int side = MapConceptMasterElevation.Resolution;
         var pixels = new byte[side * side * 4];
@@ -179,6 +180,14 @@ internal static class MapConceptMasterGenerator
             float light = Mathf.Clamp(0.5f + (dx + dy) / 9500f, 0f, 1f);
             float slope = Mathf.Clamp((Mathf.Abs(dx) + Mathf.Abs(dy)) / 16000f, 0f, 1f);
             int rgba = index * 4;
+            if (water[index] >= MapConceptWaterCarver.River)
+            {
+                pixels[rgba] = 64;
+                pixels[rgba + 1] = 144;
+                pixels[rgba + 2] = 168;
+                pixels[rgba + 3] = 218;
+                continue;
+            }
             pixels[rgba] = (byte)Mathf.Clamp(Mathf.RoundToInt(82f + light * 60f), 0, 255);
             pixels[rgba + 1] = (byte)Mathf.Clamp(Mathf.RoundToInt(81f + light * 55f), 0, 255);
             pixels[rgba + 2] = (byte)Mathf.Clamp(Mathf.RoundToInt(61f + light * 46f), 0, 255);

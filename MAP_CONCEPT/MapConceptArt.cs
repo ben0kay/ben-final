@@ -84,6 +84,16 @@ public partial class MapConceptArt : Node2D
                     new Color(0.12f, 0.27f, 0.19f), 210);
             }
         }
+        foreach (ConceptWaterway water in Layout.Waterways)
+        {
+            // Label the inland section rather than an out-of-frame ocean mouth.
+            int index = water.Kind == ConceptWaterKind.OceanInlet ?
+                water.Points.Length - 3 : Mathf.Clamp(water.Points.Length / 2,
+                    0, water.Points.Length - 1);
+            if (water.Kind == ConceptWaterKind.Tributary) continue;
+            AddMapLabel(water.Name, water.Points[index] + new Vector2(0, 16),
+                12, new Color(0.12f, 0.36f, 0.51f), 170f);
+        }
         foreach (ConceptSite site in Layout.Sites)
             AddMapLabel(site.Name, site.Position + new Vector2(0, 19), 13,
                 new Color(0.32f, 0.19f, 0.12f), 210);

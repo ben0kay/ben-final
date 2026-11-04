@@ -16,3 +16,7 @@ MaxMountainRegions = 5
 MountainCoverage = 25
 MountainRuggedness = 60
 MountainRidgeLength = 55
+MajorOceanInlets = 1
+RiverReach = 70
+RiverWinding = 65
+MaxTributaries = 3

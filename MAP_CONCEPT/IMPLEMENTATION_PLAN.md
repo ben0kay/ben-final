@@ -11,7 +11,8 @@
 | **BW-MAP2.0B** | Composite landmasses, peninsulas, deep sea inlets, marching squares; modular `Generation/` and `Rendering/` | Implemented; owner reported map looks OK so far |
 | **BW-MAP2.1** | Seed-dependent mountain count/position, coherent inland ridges, foothills, lowland valleys, sampled elevation, contour illustration and export | **Owner viewed F6 mountain map; tuning ongoing** |
 | **BW-MAP2.1B** | **4096×4096 master elevation** on a proposed 12×12 km square map, high-detail shaded-relief image, more usable framing/zoom, bounded mountain-local detail seeds, R16+JSON export | **Implemented in source; Godot C#/F6 validation pending** |
-| **BW-MAP2.2 — planned** | Inland lakes, freshwater drainage, downhill rivers, coastal estuaries; slope and sea-level checks |
+| **BW-MAP2.2A** | Sea inlets, freshwater rivers, tributaries, carving and water mask | **Implemented in source; Godot F6 validation pending** |
+| **BW-MAP2.2B** | Standalone inland lakes, overflow and wetlands | **Planned** |
 | **BW-MAP2.3 — planned** | Forest zones, meadows, wetlands and biome suitability from elevation/moisture |
 | **BW-MAP2.4 — planned** | Variable towns/cities/roads and numbered POIs, placement feasibility and connectivity |
 | **BW-MAP2.5 — planned** | Seed-gallery quality checks, biome/land constraints, diagnostics, reproducible saved presets and visual polish |
@@ -61,3 +62,13 @@
 5. Export blueprint and inspect `schema=5`, `generator_version=3`, `mountain_ridges` and `elevation`. Confirm no changes to `SCENE/Scene_World.tscn` or `WORLD/` runtime code.
 
 **Current validation evidence:** Focused static source/scene checks only; there is no Godot/.NET executable in the implementing environment. F6 screenshots and Godot compile confirmation are needed before marking MAP2.1 accepted.
+
+## MAP2.2A water system contract
+
+This milestone lives inside `MAP_CONCEPT/`; it does not modify the 3D `WORLD/` prototype or planned `WORLD_CONCEPT/` handoff. The existing ocean-carving paths are retained as typed, numbered inlet features. Each generated island requests 1–3 major ocean-connected inlets (default 1). A separately seeded, bounded elevation-guided path generator attempts a freshwater continuation inland and optional joining tributaries. The main water route is stored source-to-mouth, including widths and a nonincreasing downstream water-level profile. The algorithm is an approximate valley walker, **not** a watershed or erosion simulator; unsuitable geography can result in shorter or missing rivers.
+
+New F6 controls: major inlets (1–3), freshwater reach (0–100%), river winding (0–100%), and maximum tributaries (0–6). The existing ocean penetration slider still sets inlet depth. These settings update only on explicit generation. Mountain creation remains a separate stage.
+
+The 4096 master carves freshwater channels and blends their banks locally. It stores a separate **R8 water mask** (0 land, 1 ocean, 2 main river, 3 tributary). **Schema 7, generator version 5** exports waterways, path widths and normalized surface levels. Explicit Export writes JSON, a 32-MiB R16 heightmap and a 16-MiB R8 water mask. MAP2.2B will add separate inland lakes and their outlets later.
+
+**F6 acceptance:** Test multiple seeds, especially 0/100% Ocean Penetration, River Reach and Winding. Check inland connection, river/tributary joins, no obvious uphill reversals, correct river carving and same-seed reproducibility. Check the 3 export files and Authored Preset. Coastline output may change from previous versions because guaranteed inlets alter the land mask. This source pass is not yet runtime-validated.

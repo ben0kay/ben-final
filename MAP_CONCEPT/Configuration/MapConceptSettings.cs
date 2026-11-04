@@ -22,21 +22,30 @@ public partial class MapConceptSettings : Resource
     [Export(PropertyHint.Range, "0,100,1")] public int MountainRuggedness { get; set; } = 60;
     [Export(PropertyHint.Range, "0,100,1")] public int MountainRidgeLength { get; set; } = 55;
 
+    [ExportGroup("MAP2.2A — Ocean & River Systems")]
+    [Export(PropertyHint.Range, "1,3,1")] public int MajorOceanInlets { get; set; } = 1;
+    [Export(PropertyHint.Range, "0,100,1")] public int RiverReach { get; set; } = 70;
+    [Export(PropertyHint.Range, "0,100,1")] public int RiverWinding { get; set; } = 65;
+    [Export(PropertyHint.Range, "0,6,1")] public int MaxTributaries { get; set; } = 3;
+
     // =========================================================
     public MapConceptParameters Snapshot(long seed, int coverage, int roughness,
         int peninsulas, int islands, int complexity, int penetration,
         int minMountains, int maxMountains, int mountainCoverage,
-        int ruggedness, int ridgeLength) =>
+        int ruggedness, int ridgeLength, int oceanInlets, int riverReach,
+        int riverWinding, int tributaries) =>
         new MapConceptParameters(seed, coverage, roughness, peninsulas,
             islands, complexity, penetration, minMountains, maxMountains,
-            mountainCoverage, ruggedness, ridgeLength).Validated();
+            mountainCoverage, ruggedness, ridgeLength, oceanInlets,
+            riverReach, riverWinding, tributaries).Validated();
 }
 
 public readonly record struct MapConceptParameters(long Seed, int LandCoverage,
     int CoastRoughness, int BaysAndPeninsulas, int OffshoreIslands,
     int LandmassComplexity, int OceanPenetration,
     int MinMountainRegions, int MaxMountainRegions,
-    int MountainCoverage, int MountainRuggedness, int MountainRidgeLength)
+    int MountainCoverage, int MountainRuggedness, int MountainRidgeLength,
+    int MajorOceanInlets, int RiverReach, int RiverWinding, int MaxTributaries)
 {
     public MapConceptParameters Validated() => this with
     {
@@ -51,6 +60,10 @@ public readonly record struct MapConceptParameters(long Seed, int LandCoverage,
             System.Math.Clamp(MinMountainRegions, 0, 8), 8),
         MountainCoverage = System.Math.Clamp(MountainCoverage, 0, 100),
         MountainRuggedness = System.Math.Clamp(MountainRuggedness, 0, 100),
-        MountainRidgeLength = System.Math.Clamp(MountainRidgeLength, 0, 100)
+        MountainRidgeLength = System.Math.Clamp(MountainRidgeLength, 0, 100),
+        MajorOceanInlets = System.Math.Clamp(MajorOceanInlets, 1, 3),
+        RiverReach = System.Math.Clamp(RiverReach, 0, 100),
+        RiverWinding = System.Math.Clamp(RiverWinding, 0, 100),
+        MaxTributaries = System.Math.Clamp(MaxTributaries, 0, 6)
     };
 }

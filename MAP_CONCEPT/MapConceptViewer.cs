@@ -17,10 +17,14 @@ public partial class MapConceptViewer : Node2D
     private Label _complexityText = null!, _oceanText = null!;
     private Label _mountainMinText = null!, _mountainMaxText = null!,
         _mountainCoverageText = null!, _ruggednessText = null!, _ridgeLengthText = null!;
+    private Label _inletsText = null!, _reachText = null!, _windingText = null!,
+        _tributariesText = null!;
     private HSlider _coverage = null!, _roughness = null!, _peninsulas = null!, _islets = null!;
     private HSlider _complexity = null!, _ocean = null!;
     private HSlider _mountainMin = null!, _mountainMax = null!,
         _mountainCoverage = null!, _ruggedness = null!, _ridgeLength = null!;
+    private HSlider _inlets = null!, _riverReach = null!, _riverWinding = null!,
+        _tributaries = null!;
     private Button _rebuild = null!, _randomSeed = null!, _reset = null!, _export = null!;
     private Button _togglePanel = null!;
     private PanelContainer _sidePanel = null!;
@@ -60,6 +64,10 @@ public partial class MapConceptViewer : Node2D
         _mountainCoverage = GetNode<HSlider>(ControlRoot + "MountainCoverageSlider");
         _ruggedness = GetNode<HSlider>(ControlRoot + "MountainRuggednessSlider");
         _ridgeLength = GetNode<HSlider>(ControlRoot + "MountainRidgeLengthSlider");
+        _inlets = GetNode<HSlider>(ControlRoot + "MajorInletsSlider");
+        _riverReach = GetNode<HSlider>(ControlRoot + "RiverReachSlider");
+        _riverWinding = GetNode<HSlider>(ControlRoot + "RiverWindingSlider");
+        _tributaries = GetNode<HSlider>(ControlRoot + "TributariesSlider");
         _coverageText = GetNode<Label>(ControlRoot + "CoverageLabel");
         _roughnessText = GetNode<Label>(ControlRoot + "RoughnessLabel");
         _peninsulaText = GetNode<Label>(ControlRoot + "PeninsulaLabel");
@@ -71,6 +79,10 @@ public partial class MapConceptViewer : Node2D
         _mountainCoverageText = GetNode<Label>(ControlRoot + "MountainCoverageLabel");
         _ruggednessText = GetNode<Label>(ControlRoot + "MountainRuggednessLabel");
         _ridgeLengthText = GetNode<Label>(ControlRoot + "MountainRidgeLengthLabel");
+        _inletsText = GetNode<Label>(ControlRoot + "MajorInletsLabel");
+        _reachText = GetNode<Label>(ControlRoot + "RiverReachLabel");
+        _windingText = GetNode<Label>(ControlRoot + "RiverWindingLabel");
+        _tributariesText = GetNode<Label>(ControlRoot + "TributariesLabel");
         _rebuild = GetNode<Button>(ControlRoot + "RebuildButton");
         _randomSeed = GetNode<Button>(ControlRoot + "RandomSeedButton");
         _reset = GetNode<Button>(ControlRoot + "ResetViewButton");
@@ -91,6 +103,10 @@ public partial class MapConceptViewer : Node2D
         _mountainCoverage.Value = Settings.MountainCoverage;
         _ruggedness.Value = Settings.MountainRuggedness;
         _ridgeLength.Value = Settings.MountainRidgeLength;
+        _inlets.Value = Settings.MajorOceanInlets;
+        _riverReach.Value = Settings.RiverReach;
+        _riverWinding.Value = Settings.RiverWinding;
+        _tributaries.Value = Settings.MaxTributaries;
         _labels.ButtonPressed = true;
 
         _mode.ItemSelected += OnModeSelected;
@@ -112,6 +128,10 @@ public partial class MapConceptViewer : Node2D
         _mountainCoverage.ValueChanged += UpdateSliderLabels;
         _ruggedness.ValueChanged += UpdateSliderLabels;
         _ridgeLength.ValueChanged += UpdateSliderLabels;
+        _inlets.ValueChanged += UpdateSliderLabels;
+        _riverReach.ValueChanged += UpdateSliderLabels;
+        _riverWinding.ValueChanged += UpdateSliderLabels;
+        _tributaries.ValueChanged += UpdateSliderLabels;
         UpdateSliderLabels(0);
         _camera.MakeCurrent();
         GenerateMap();
@@ -140,6 +160,10 @@ public partial class MapConceptViewer : Node2D
         if (GodotObject.IsInstanceValid(_mountainCoverage)) _mountainCoverage.ValueChanged -= UpdateSliderLabels;
         if (GodotObject.IsInstanceValid(_ruggedness)) _ruggedness.ValueChanged -= UpdateSliderLabels;
         if (GodotObject.IsInstanceValid(_ridgeLength)) _ridgeLength.ValueChanged -= UpdateSliderLabels;
+        if (GodotObject.IsInstanceValid(_inlets)) _inlets.ValueChanged -= UpdateSliderLabels;
+        if (GodotObject.IsInstanceValid(_riverReach)) _riverReach.ValueChanged -= UpdateSliderLabels;
+        if (GodotObject.IsInstanceValid(_riverWinding)) _riverWinding.ValueChanged -= UpdateSliderLabels;
+        if (GodotObject.IsInstanceValid(_tributaries)) _tributaries.ValueChanged -= UpdateSliderLabels;
     }
     #endregion
 
@@ -263,6 +287,10 @@ public partial class MapConceptViewer : Node2D
         _mountainCoverage.Editable = procedural;
         _ruggedness.Editable = procedural;
         _ridgeLength.Editable = procedural;
+        _inlets.Editable = procedural;
+        _riverReach.Editable = procedural;
+        _riverWinding.Editable = procedural;
+        _tributaries.Editable = procedural;
         _rebuild.Text = procedural ? "Generate island from seed" : "Reload authored preset";
         GenerateMap();
     }
@@ -297,6 +325,10 @@ public partial class MapConceptViewer : Node2D
         _mountainCoverageText.Text = $"Mountain coverage: {(int)_mountainCoverage.Value}%";
         _ruggednessText.Text = $"Mountain ruggedness: {(int)_ruggedness.Value}%";
         _ridgeLengthText.Text = $"Ridge length: {(int)_ridgeLength.Value}%";
+        _inletsText.Text = $"Major ocean inlets: {(int)_inlets.Value}";
+        _reachText.Text = $"Freshwater river reach: {(int)_riverReach.Value}%";
+        _windingText.Text = $"River meandering: {(int)_riverWinding.Value}%";
+        _tributariesText.Text = $"Maximum tributaries per river: {(int)_tributaries.Value}";
     }
 
     // =========================================================
@@ -328,7 +360,9 @@ public partial class MapConceptViewer : Node2D
                 (int)_complexity.Value, (int)_ocean.Value,
                 (int)_mountainMin.Value, (int)_mountainMax.Value,
                 (int)_mountainCoverage.Value, (int)_ruggedness.Value,
-                (int)_ridgeLength.Value);
+                (int)_ridgeLength.Value, (int)_inlets.Value,
+                (int)_riverReach.Value, (int)_riverWinding.Value,
+                (int)_tributaries.Value);
             layout = MapConceptGenerator.Generate(parameters.Value);
         }
         else layout = MapConceptLayout.CreateDefault();
@@ -348,10 +382,13 @@ public partial class MapConceptViewer : Node2D
               $" / {MapConceptMasterElevation.WorldMetres / 1000f:0} km square\n" +
               $"Master step: {MapConceptMasterElevation.MetresPerSample:F2} m | " +
               $"Preview: {MapConceptElevationGrid.Columns}×{MapConceptElevationGrid.Rows}\n" +
-              "Full detail generated on button press; lakes/forests/settlements later."
+              $"Ocean inlets: {layout.Waterways.FindAll(w => w.Kind == ConceptWaterKind.OceanInlet).Count} | " +
+              $"Rivers: {layout.Waterways.FindAll(w => w.Kind == ConceptWaterKind.River).Count} | " +
+              $"Tributaries: {layout.Waterways.FindAll(w => w.Kind == ConceptWaterKind.Tributary).Count}\n" +
+              "Water carved in 4096 master; inland lakes are MAP2.2B."
             : $"Authored preset Island 1 | Decorative seed {seed}\n" +
               "Original forests, mountains, roads and sites preserved.";
-        GD.Print($"[MAP2.1B] {(procedural ? "Procedural island" : "Authored preset")} seed {seed}; " +
+        GD.Print($"[MAP2.2A] {(procedural ? "Procedural island" : "Authored preset")} seed {seed}; " +
             $"land {MapConceptGenerator.LandPercent(layout):F1}%; islets {layout.Islets.Count}.");
     }
 
@@ -366,11 +403,18 @@ public partial class MapConceptViewer : Node2D
         MapConceptMasterElevation? master = _art.Layout.MasterElevation;
         if (master != null)
         {
+            string maskPath = "user://" + MapConceptMasterElevation.WaterFile;
+            if (!master.SaveWaterMask(maskPath))
+            {
+                _status.Text = "Could not export 4096 water mask. See Godot Output.";
+                GD.PushError("[MAP2.2A] Water mask export failed: " + maskPath);
+                return;
+            }
             string rawPath = "user://" + MapConceptMasterElevation.RawFile;
             if (!master.SaveRaw(rawPath))
             {
                 _status.Text = "Could not export 4096 master elevation. See Godot Output.";
-                GD.PushError("[MAP2.1B] Master R16 export failed: " + rawPath);
+                GD.PushError("[MAP2.2A] Master R16 export failed: " + rawPath);
                 return;
             }
         }
@@ -386,7 +430,9 @@ public partial class MapConceptViewer : Node2D
         file.Flush();
         _status.Text = "Blueprint saved:\n" + ProjectSettings.GlobalizePath(path) +
             (master != null ? "\nMaster R16: " +
-                ProjectSettings.GlobalizePath("user://" + MapConceptMasterElevation.RawFile) : "");
+                ProjectSettings.GlobalizePath("user://" + MapConceptMasterElevation.RawFile) +
+                "\nWater mask R8: " +
+                ProjectSettings.GlobalizePath("user://" + MapConceptMasterElevation.WaterFile) : "");
         GD.Print("[MAP2.1B] Exported map: " + ProjectSettings.GlobalizePath(path));
     }
     #endregion

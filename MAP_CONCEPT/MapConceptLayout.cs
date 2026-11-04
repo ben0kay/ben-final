@@ -43,6 +43,7 @@ public sealed class MapConceptLayout
     public readonly List<ConceptSite> Sites = new();
     public readonly List<ConceptRoute> Routes = new();
     public readonly List<ConceptMountainRidge> MountainRidges = new();
+    public readonly List<ConceptWaterway> Waterways = new();
     public MapConceptElevationGrid? Elevation { get; internal set; }
     public MapConceptMasterElevation? MasterElevation { get; internal set; }
 
@@ -158,7 +159,7 @@ public sealed class MapConceptLayout
         var parameters = settings?.Validated();
         var data = new
         {
-            schema = 6, id = "island-concept-v1",
+            schema = 7, id = "island-concept-v1",
             layout_mode = IsProcedural ? "procedural_coastline" : "authored_preset",
             world_seed = worldSeed.ToString(CultureInfo.InvariantCulture),
             generator_version = IsProcedural ? MapConceptGenerator.GeneratorVersion : 0,
@@ -174,7 +175,11 @@ public sealed class MapConceptLayout
                 mountain_regions_max = parameters.Value.MaxMountainRegions,
                 mountain_coverage = parameters.Value.MountainCoverage,
                 mountain_ruggedness = parameters.Value.MountainRuggedness,
-                mountain_ridge_length = parameters.Value.MountainRidgeLength
+                mountain_ridge_length = parameters.Value.MountainRidgeLength,
+                major_ocean_inlets = parameters.Value.MajorOceanInlets,
+                river_reach = parameters.Value.RiverReach,
+                river_winding = parameters.Value.RiverWinding,
+                max_tributaries = parameters.Value.MaxTributaries
             } : null,
             map_units = new { width = MapWidth, height = MapHeight, metres_per_unit = MetresPerUnit },
             coordinate_convention = "X east, Y south (maps to world Z); map zero at island centre",
@@ -200,6 +205,21 @@ public sealed class MapConceptLayout
                     width = r.DetailBounds.Size.X, height = r.DetailBounds.Size.Y
                 }
             }).ToArray(),
+            waterways = Waterways.Select(w => new
+            {
+                id = w.Id, name = w.Name, kind = w.Kind.ToString(),
+                points = Coords(w.Points), half_widths = w.HalfWidths,
+                surface_levels = w.SurfaceLevels
+            }).ToArray(),
+            water_mask = MasterElevation == null ? null : new
+            {
+                file = MapConceptMasterElevation.WaterFile,
+                resolution = MapConceptMasterElevation.Resolution,
+                format = "r8",
+                classes = new { land = 0, ocean = 1, river = 2, tributary = 3 },
+                sample_order = "row_major_top_to_bottom",
+                surface_levels = "normalized; per-waterway vertices in waterways"
+            },
             master_elevation = MasterElevation == null ? null : new
             {
                 file = MapConceptMasterElevation.RawFile,

@@ -82,8 +82,9 @@ internal sealed class MapConceptLandField : IDisposable
 
         // Ocean-connected paths: a wide outer bay narrows into a winding
         // estuary-like inland channel. Future freshwater rivers are separate.
-        int inlets = penetration <= 0.04f ? 0 : 1 +
-            rng.NextInt(0, 2 + (int)(penetration * 3f));
+        // Always create at least one ocean-connected channel. This path starts
+        // outside the map and reaches the solid central land core.
+        int inlets = p.MajorOceanInlets;
         float inletPhase = rng.Range(0f, Mathf.Tau);
         for (int i = 0; i < inlets; i++)
         {
@@ -91,8 +92,8 @@ internal sealed class MapConceptLandField : IDisposable
                 Mathf.Max(1f, inlets);
             Vector2 direction = new(Mathf.Cos(angle), Mathf.Sin(angle));
             Vector2 side = new(-direction.Y, direction.X);
-            float endDistance = Mathf.Lerp(315f, 85f, penetration) +
-                rng.Range(-45f, 65f);
+            float endDistance = Mathf.Lerp(145f, 42f, penetration) +
+                rng.Range(-16f, 27f);
             float bend = rng.Range(-200f, 200f) * (0.30f + 0.70f * penetration);
             float wiggle = rng.Range(-75f, 75f) * penetration;
             var points = new PathPoint[17];
@@ -111,6 +112,29 @@ internal sealed class MapConceptLandField : IDisposable
             }
             _inlets.Add(new PathShape(points));
         }
+    }
+
+    // =========================================================
+    // Preserve the *same* excavating paths as explicit map data. Do not
+    // regenerate independent blue lines or re-roll geography in Water/.
+    public List<ConceptWaterway> ExportOceanInlets()
+    {
+        var result = new List<ConceptWaterway>(_inlets.Count);
+        for (int i = 0; i < _inlets.Count; i++)
+        {
+            PathPoint[] samples = _inlets[i].Samples;
+            var positions = new Vector2[samples.Length];
+            var widths = new float[samples.Length];
+            var surfaces = new float[samples.Length];
+            for (int j = 0; j < samples.Length; j++)
+            {
+                positions[j] = samples[j].Position;
+                widths[j] = samples[j].Radius;
+            }
+            result.Add(new ConceptWaterway(ConceptWaterKind.OceanInlet, i + 1,
+                positions, widths, surfaces));
+        }
+        return result;
     }
 
     // =========================================================

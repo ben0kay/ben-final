@@ -16,6 +16,9 @@ public sealed class MapConceptMasterElevation : IDisposable
     public const float Step = CanvasUnits / (Resolution - 1f);
     public const float MetresPerSample = WorldMetres / (Resolution - 1f);
     public readonly ushort[] Heights = new ushort[Resolution * Resolution];
+    // 0=land; 1=ocean; 2=main river; 3=tributary. One byte per pixel.
+    public readonly byte[] WaterMask = new byte[Resolution * Resolution];
+    public const string WaterFile = "map_concept_water_4096.r8";
     public ImageTexture? ReliefTexture { get; internal set; }
     public Rect2 MapRect => new(Origin, new Vector2(CanvasUnits, CanvasUnits));
 
@@ -44,6 +47,16 @@ public sealed class MapConceptMasterElevation : IDisposable
         var bytes = new byte[Heights.Length * sizeof(ushort)];
         Buffer.BlockCopy(Heights, 0, bytes, 0, bytes.Length);
         file.StoreBuffer(bytes);
+        file.Flush();
+        return true;
+    }
+
+    // =========================================================
+    public bool SaveWaterMask(string userPath)
+    {
+        using var file = FileAccess.Open(userPath, FileAccess.ModeFlags.Write);
+        if (file == null) return false;
+        file.StoreBuffer(WaterMask);
         file.Flush();
         return true;
     }

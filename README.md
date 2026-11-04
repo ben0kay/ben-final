@@ -105,17 +105,17 @@ For example, a zombie's identity, health, senses, movement state, attacks, leade
 
 **Do not rush these systems into Ben Final now.** First validate **BW-W4.0**, build and test real **BW-W4.1 terrain streaming**, then disposable tree/grass/prop/dummy-entity stress tests and later LOD. Only after the streaming performance gate is accepted should War Machine components be reviewed **one system at a time**. The deep survival/sandbox/modding vision guides API boundaries and data ownership today; it does **not** authorize speculative gameplay rewrites, premature mod loaders or new permanent models.
 
-## Map-first island concept — BW-MAP1 through MAP2.1B
+## Map-first island concept — BW-MAP1 through MAP2.2A
 
-The independent [MAP_CONCEPT/Scene_MapConcept.tscn](MAP_CONCEPT/Scene_MapConcept.tscn) F6 scene lets the owner iterate on seeded island geography before any 3D integration. `MAP_CONCEPT/` has its own modular `Generation/` and `Rendering/` folders and a preserved numbered **Authored Preset**.
+`MAP_CONCEPT/Scene_MapConcept.tscn` is the independent F6 scene for seed-driven island layout, mountain ranges and now **water systems**. The separate authored preset remains selectable and there is **no 3D WORLD/WORLD_CONCEPT integration**.
 
-- **MAP2.0B:** Owner-viewed composite landmasses, peninsulas, winding ocean inlets and FastNoiseLite shorelines, with responsive zoom/pan.
-- **MAP2.1:** Owner-viewed numbered mountain ridges, broad 129×89 normalized elevation, foothills and contour illustration.
-- **MAP2.1B (implemented in source; awaiting C# and F6 validation):** A **4096×4096 normalized 16-bit master elevation map**, on a proposed **12×12 km square** concept canvas (~2.93 m/sample); deterministic fine detail layered over existing broad geography; a cached 4096² shaded-relief image; optional hide/show panel; island-aware camera fitting and **32× zoom**. Individual mountain regions now have **stable local detail seeds and bounds** for future contained editing (the per-mountain reroll UI is still planned).
-- **Export:** MAP2.1B writes **JSON schema 6** metadata, and on explicit Export also produces a separate **32 MiB little-endian R16 elevation file**, instead of bloating JSON with 16.8 million height samples. The original 129×89 overview remains for quick broad contour drawing.
-- **Scope:** The 4096 master is **2D concept data**, not the actual terrain/chunk streaming system. Lakes, freshwater rivers, forests/biomes, towns/cities/POIs and regional editing remain planned; `WORLD/` runtime is unchanged. The current shoreline remains in the original ~1600×1080 drawing frame within the larger square 1600×1600 map-data canvas.
+- **MAP2.0B:** Seeded shaped mainland, winding coastline/ocean inlets and offshore islets, using FastNoiseLite and marching squares.
+- **MAP2.1 / 2.1B:** Seeded numbered mountain ranges, broad elevation and 4096×4096 normalized R16 master terrain on a provisional 12×12 km map, cached relief, local mountain detail seeds and deep zoom.
+- **MAP2.2A (implemented in source; Godot validation pending):** Guaranteed **one or more major ocean-connected inlets**, retained as real coast-carving paths; elevation-guided **freshwater river continuations**, bounded meanders and optional tributaries. Separate water settings for major inlet count, river reach, winding and tributaries. A local pass carves riverbeds into the 4096 height master and creates a per-pixel R8 water classification mask.
+- **Export:** JSON **schema 7**, generator **version 5**, typed numbered `Ocean Inlet 1`, `River 1`, `Tributary 1` paths with widths and normalized water levels; the binary **R16 elevation** and **R8 water mask** are saved explicitly alongside JSON. Coastline results may differ from earlier versions due to the new inlet guarantee.
+- **Upcoming:** MAP2.2B inland lakes, MAP2.3 biomes/forests, MAP2.4 towns/cities/POIs, then a future approved `WORLD_CONCEPT/` 3D fly-around translation. The water-route algorithm is a deterministic concept planner, **not yet a complete downhill drainage or lake/flood simulation**.
 
-Owned guide: [MAP_CONCEPT/README.md](MAP_CONCEPT/README.md). Roadmap and acceptance: [MAP_CONCEPT/IMPLEMENTATION_PLAN.md](MAP_CONCEPT/IMPLEMENTATION_PLAN.md).
+Owned guide: [MAP_CONCEPT/README.md](MAP_CONCEPT/README.md). Milestones: [MAP_CONCEPT/IMPLEMENTATION_PLAN.md](MAP_CONCEPT/IMPLEMENTATION_PLAN.md).
 
 ## Core development approach: independent scenes
 
@@ -289,7 +289,8 @@ The terrain vision is **a coherent finite island**: varied coastline and ocean, 
 | **BW-MAP2.0B** | Composed mainland and deep ocean inlets | Overlapping land masses, branching peninsula arms, ocean-carved channels, marching-squares contours and modular cleanup | **Owner reports maps look OK; further quality validation ongoing** |
 | **BW-MAP2.1** | Mountains and elevation | Connected seeded ridges and highlands, normalized 129×89 overview elevation, contour shading and mountain sliders | **Owner-tested visually; refinement ongoing** |
 | **BW-MAP2.1B** | 4096-square island master blueprint | 12-km square 4096² R16 elevation, cached relief, mountain-local seed metadata, 32× zoom, panel-aware fitting and schema-6 export | **Implemented in source — awaiting Godot C#/F6 validation** |
-| **BW-MAP2.2–MAP2.5** | Map hydrology, biomes, settlements and polish | Lakes/rivers, forests, towns/cities/roads/POIs and seed-quality acceptance (see MAP_CONCEPT plan) | **Planned** |
+| **BW-MAP2.2A** | Major ocean inlets and freshwater rivers | Seeded inlet carving, waterway IDs, meanders/tributaries, 4096 riverbed carving and R8 mask | **Implemented in source — awaiting Godot build/F6** |
+| **BW-MAP2.2B–MAP2.5** | Lakes, biomes, settlements and polish | Inland lakes, forests, towns/cities/roads/POIs and quality acceptance | **Planned** |
 | **BW-W4.0** | Streaming measurement baseline | F1 manual capture and fixed 60/180 m/s fly routes, frame-time histogram (median/P95/P99/worst), GC and terrain timing breakdown | **Implemented in source — awaiting Godot validation** |
 | **BW-W4** | Streaming and LOD | Camera-centred terrain residency, bounded load/unload queues, collision readiness, distance LOD and transitions; current preview still retains all generated chunks | **Planned — next priority** |
 | **BW-W4T** | Disposable streaming stress tests | Temporary trees/grass/ferns, props and dummy actors; repeatable fast-travel tests, frame-time/memory instrumentation and cleanup **before War Machine imports** | **Planned — gated on BW-W4 foundations** |

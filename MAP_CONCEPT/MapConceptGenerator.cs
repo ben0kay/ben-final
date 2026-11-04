@@ -5,7 +5,7 @@ using Godot;
 
 public static class MapConceptGenerator
 {
-    public const int GeneratorVersion = 4;
+    public const int GeneratorVersion = 5;
     private const int MaxAttempts = 5;
 
     #region Generation
@@ -36,6 +36,7 @@ public static class MapConceptGenerator
             if (bounds.Size.X < 450f || bounds.Size.Y < 270f) score *= 0.45f;
 
             var candidate = MapConceptLayout.CreateProcedural(coast);
+            candidate.Waterways.AddRange(field.ExportOceanInlets());
             // Natural fragments count toward the user's island limit.
             for (int i = 1; i < contours.Count && candidate.Islets.Count < parameters.OffshoreIslands; i++)
                 if (MapConceptGeometry.PolygonArea(contours[i]) >= 650f &&
@@ -59,6 +60,7 @@ public static class MapConceptGenerator
         if (best != null)
         {
             MapConceptMountainGenerator.Populate(best, parameters);
+            MapConceptWaterGenerator.Populate(best, parameters);
             MapConceptMasterGenerator.Populate(best, parameters.Seed);
             return best;
         }
@@ -70,7 +72,10 @@ public static class MapConceptGenerator
                 Mathf.Sin(angle) * 255f);
         }
         var fallback = MapConceptLayout.CreateProcedural(safeCoast);
+        // A degenerate coast has no carved channel; preserve a safe coastline
+        // rather than inventing an inlet disconnected from the sea.
         MapConceptMountainGenerator.Populate(fallback, parameters);
+        MapConceptWaterGenerator.Populate(fallback, parameters);
         MapConceptMasterGenerator.Populate(fallback, parameters.Seed);
         return fallback;
     }
