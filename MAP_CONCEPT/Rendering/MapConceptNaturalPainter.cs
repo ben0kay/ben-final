@@ -7,7 +7,7 @@ internal sealed class MapConceptNaturalPainter
     private readonly MapConceptArt Canvas;
     private readonly MapConceptLayout Layout;
     private readonly int ScatterSeed;
-    private static readonly Color Water = new(0.54f, 0.76f, 0.81f);
+    private static readonly Color Water = MapConceptWaterPalette.Ocean;
     private static readonly Color WaterInk = new(0.21f, 0.51f, 0.59f, 0.42f);
     private static readonly Color Parchment = new(0.85f, 0.84f, 0.68f);
     private static readonly Color Earth = new(0.43f, 0.40f, 0.29f);

@@ -5,7 +5,7 @@ using Godot;
 
 public static class MapConceptGenerator
 {
-    public const int GeneratorVersion = 5;
+    public const int GeneratorVersion = 6;
     private const int MaxAttempts = 5;
 
     #region Generation

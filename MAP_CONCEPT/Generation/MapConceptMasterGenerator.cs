@@ -182,10 +182,10 @@ internal static class MapConceptMasterGenerator
             int rgba = index * 4;
             if (water[index] >= MapConceptWaterCarver.River)
             {
-                pixels[rgba] = 64;
-                pixels[rgba + 1] = 144;
-                pixels[rgba + 2] = 168;
-                pixels[rgba + 3] = 218;
+                pixels[rgba] = MapConceptWaterPalette.OceanR;
+                pixels[rgba + 1] = MapConceptWaterPalette.OceanG;
+                pixels[rgba + 2] = MapConceptWaterPalette.OceanB;
+                pixels[rgba + 3] = 255;
                 continue;
             }
             pixels[rgba] = (byte)Mathf.Clamp(Mathf.RoundToInt(82f + light * 60f), 0, 255);

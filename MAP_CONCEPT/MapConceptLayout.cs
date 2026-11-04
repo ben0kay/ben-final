@@ -159,7 +159,7 @@ public sealed class MapConceptLayout
         var parameters = settings?.Validated();
         var data = new
         {
-            schema = 7, id = "island-concept-v1",
+            schema = 8, id = "island-concept-v1",
             layout_mode = IsProcedural ? "procedural_coastline" : "authored_preset",
             world_seed = worldSeed.ToString(CultureInfo.InvariantCulture),
             generator_version = IsProcedural ? MapConceptGenerator.GeneratorVersion : 0,
@@ -208,6 +208,7 @@ public sealed class MapConceptLayout
             waterways = Waterways.Select(w => new
             {
                 id = w.Id, name = w.Name, kind = w.Kind.ToString(),
+                connected_to = w.ConnectedWaterwayId,
                 points = Coords(w.Points), half_widths = w.HalfWidths,
                 surface_levels = w.SurfaceLevels
             }).ToArray(),

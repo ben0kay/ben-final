@@ -1,13 +1,11 @@
-// BW-MAP2.2A: show generated freshwater branches while retaining existing drawn ocean bays.
+// BW-MAP2.2A water painter: seamless single-colour rivers in the ocean tint.
+// Rounded centreline capsules match the shared 4096 riverbed carving geometry.
 using Godot;
 
 internal sealed class MapConceptWaterPainter
 {
     private readonly MapConceptArt _canvas;
     private readonly MapConceptLayout _map;
-    private static readonly Color Bank = new(0.18f, 0.36f, 0.38f, 0.63f);
-    private static readonly Color Freshwater = new(0.32f, 0.64f, 0.76f, 0.97f);
-    private static readonly Color Glint = new(0.75f, 0.89f, 0.90f, 0.65f);
 
     public MapConceptWaterPainter(MapConceptArt canvas, MapConceptLayout map)
     {
@@ -16,21 +14,28 @@ internal sealed class MapConceptWaterPainter
     }
 
     // =========================================================
-    // The coastline mask already renders saltwater inlets; drawing their full
-    // off-map excavating paths would be an incorrect painted sea river.
     public void Draw()
     {
+        // Saltwater is already represented by the *actual* coastline hole.
+        // Freshwater extends across the shoreline into it, so there is no gap.
         foreach (ConceptWaterway water in _map.Waterways)
         {
             if (water.Kind == ConceptWaterKind.OceanInlet) continue;
-            for (int i = 0; i < water.Points.Length - 1; i++)
+            MapConceptWaterSample[] samples = MapConceptWaterGeometry.Smooth(water);
+            if (samples.Length < 2) continue;
+
+            Color ocean = MapConceptWaterPalette.Ocean;
+            for (int i = 0; i < samples.Length - 1; i++)
             {
-                Vector2 a = water.Points[i], b = water.Points[i + 1];
-                float width = water.HalfWidths[i] + water.HalfWidths[i + 1];
-                _canvas.DrawLine(a, b, Bank, width + 3.5f, true);
-                _canvas.DrawLine(a, b, Freshwater, width, true);
-                _canvas.DrawLine(a, b, Glint, Mathf.Max(0.8f, width * 0.17f), true);
+                float width = samples[i].HalfWidth + samples[i + 1].HalfWidth;
+                _canvas.DrawLine(samples[i].Position, samples[i + 1].Position,
+                    ocean, width, true);
             }
+
+            // All joints/caps are circular, rather than thick, flat-ended
+            // overlapping lines with visible rectangular colour seams.
+            foreach (MapConceptWaterSample sample in samples)
+                _canvas.DrawCircle(sample.Position, sample.HalfWidth, ocean);
         }
     }
 }

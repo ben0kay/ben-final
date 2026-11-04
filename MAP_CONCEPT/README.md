@@ -1,6 +1,6 @@
 # MAP_CONCEPT — Seeded island cartography
 
-**Status:** BW-MAP2.2A ocean inlets and freshwater rivers implemented in source; **awaiting local Godot C# build and F6 visual validation**. Existing MAP2.1B 4096 master, mountain ranges, authored preset and map viewer are preserved. No 3D terrain, gameplay or streaming modifications.
+**Status:** The owner successfully viewed MAP2.2A in F6 and reported **detached river endings and thick, segmented blue blocks**. The MAP2.2A-R1 source correction now verifies actual coast crossings, connects every emitted river to its originating ocean inlet and renders the same smoothed riverbed channel with the **exact ocean colour**. **The correction is awaiting local Godot C#/F6 validation.** MAP2.2B inland lakes remain planned. The authored preset and WORLD runtime are unchanged.
 
 The phase roadmap, acceptance checklist and future lake/forest/town work are in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
@@ -25,6 +25,12 @@ Existing sliders for landmass size, coastline roughness, peninsula branching, co
 **Master terrain:** Only pixels close to freshwater routes are carved into the 4096 elevation raster. A gentle bank transition preserves surrounding terrain. A separate single-channel water map marks **0 land, 1 ocean, 2 freshwater main river, 3 tributary**. These pixels are included in the relief preview and can be exported for future 3D translation. Ocean inlet water is sea-level water from the actual coastline; separate inland lakes are MAP2.2B.
 
 **Code ownership:** `Generation/Water/MapConceptWaterway.cs` (typed data), `MapConceptWaterGenerator.cs` (freshwater layout), `MapConceptWaterCarver.cs` (local raster edits and classification), `Rendering/MapConceptWaterPainter.cs` (visuals). The original authored preset is unchanged.
+
+## MAP2.2A-R1 — Connected and seamless rivers
+
+A freshwater river is now emitted **only when the planner finds a real sea-to-mainland crossing along its inlet**. The outlet is precisely bisected on the selected coastline, then extended briefly into the sea so there is no visual gap. The upstream route starts on verified inland terrain. Missing suitable terrain means **no floating river is created** for that inlet; the F6 status remains the authority for the actual count.
+
+`MapConceptWaterGeometry.cs` supplies a shared interpolating centreline, half-width and water-level profile for both the vector painter and 4096 raster carver. Painter strokes use rounded water-coloured capsules instead of stacked flat-ended blue bands. The fill matches the sea palette exactly, including the relief texture. A river's `connected_to` ID names the source `oceaninlet_NNN`; tributaries name their main river. **This is a connection/visual correction, not a new lake generator or complete watershed implementation.**
 
 ## Three independent dimensions
 
@@ -74,7 +80,7 @@ No new frame-processing scripts or external addons are introduced. The 4096 mast
 
 ## JSON and binary contract
 
-**Schema 7**, **generator version 5**. JSON retains full signed 64-bit world seed as an exact string, coastline and islets, mountain ridge paths and coarse elevation. Additional `master_elevation` metadata describes the **separate** `map_concept_master_4096.r16` file, square resolution, row order, origin/step and proposed world scale. Each `mountain_ridges` entry now carries `local_detail_seed` and `detail_bounds`.
+**Current export: Schema 8, generator version 6** (MAP2.2A-R1 river confluence/geometry correction). JSON retains full signed 64-bit world seed as an exact string, coastline and islets, mountain ridge paths and coarse elevation. Additional `master_elevation` metadata describes the **separate** `map_concept_master_4096.r16` file, square resolution, row order, origin/step and proposed world scale. Each `mountain_ridges` entry now carries `local_detail_seed` and `detail_bounds`.
 
 The master elevation is **row-major top-to-bottom, little-endian normalized R16**; the accompanying water mask is **row-major R8** with the four class values above. Ocean height is zero. No 16-million-element JSON arrays. The binary files are written only on explicit Export; keep JSON, R16 and R8 together. Existing schema-5 exports are not silently treated as high-resolution files.
 
@@ -83,7 +89,7 @@ The master elevation is **row-major top-to-bottom, little-endian normalized R16*
 1. Try seeds `254279584798` and `4594759834789` and the previous owner's test seed. Confirm unchanged coast/major mountain arrangement for matching settings, with new fine relief visible when zoomed.
 2. Hide the side panel, press **R**, and verify the island is large and centred in the free viewport. Zoom in and out, including mountain zones; ensure panning is smooth without regenerating.
 3. Repeat the same seed/settings; compare final relief visually and exported R16 bytes. Change only mountain sliders; coastlines must remain fixed.
-4. Export and confirm JSON, a 33,554,432-byte R16 file and a 16,777,216-byte R8 mask. Check schema 7, generator version 5 and waterway widths/levels.
+4. Export and confirm JSON, a 33,554,432-byte R16 file and a 16,777,216-byte R8 mask. Check **schema 8, generator version 6**, `connected_to` parent-waterway IDs and waterway widths/levels.
 5. Restore Authored Preset and confirm unchanged named-by-number features. Check no new errors in Godot Output; confirm `WORLD/` scenes and source are untouched.
 
-**Verification:** This MAP2.2A pass received focused source/path checks only. No installed Godot/.NET compiler or owner F6 screenshots are available for the new water work. Please report build errors or visual problems before marking accepted.
+**Verification:** The owner confirmed the original MAP2.2A ran in F6 and provided river-gap/colour screenshots. The MAP2.2A-R1 fix has only focused source/path checks so far; no installed Godot/.NET compiler was available. Check several seeds before marking the correction accepted.

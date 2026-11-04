@@ -20,6 +20,9 @@ public sealed record ConceptWaterway(ConceptWaterKind Kind, int Number,
         _ => $"Tributary {Number}"
     };
 
+    // River -> ocean inlet and tributary -> main river links are explicit data.
+    public string? ConnectedWaterwayId { get; init; }
+
     // Saltwater inlets store ocean -> inland; freshwater stores source -> mouth.
     public Vector2 InlandEnd => Kind == ConceptWaterKind.OceanInlet ? Points[^1] : Points[0];
 }

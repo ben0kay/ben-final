@@ -20,10 +20,12 @@ internal static class MapConceptWaterCarver
         {
             if (stream.Kind == ConceptWaterKind.OceanInlet) continue;
             byte kind = stream.Kind == ConceptWaterKind.River ? River : Tributary;
-            for (int i = 0; i < stream.Points.Length - 1; i++)
-                CarveSegment(master, stream.Points[i], stream.Points[i + 1],
-                    stream.HalfWidths[i], stream.HalfWidths[i + 1],
-                    stream.SurfaceLevels[i], stream.SurfaceLevels[i + 1], kind);
+            // Exactly the same continuous curved centreline as the F6 drawing.
+            MapConceptWaterSample[] samples = MapConceptWaterGeometry.Smooth(stream);
+            for (int i = 0; i < samples.Length - 1; i++)
+                CarveSegment(master, samples[i].Position, samples[i + 1].Position,
+                    samples[i].HalfWidth, samples[i + 1].HalfWidth,
+                    samples[i].SurfaceLevel, samples[i + 1].SurfaceLevel, kind);
         }
     }
 

@@ -15,25 +15,31 @@ internal static class MapConceptWaterGenerator
     {
         if (map.Elevation == null) return;
         var random = new MapConceptSeedStream(unchecked((ulong)settings.Seed) ^ RiverSalt);
+        // Rendering and the 4096 master both use this smoothed shoreline.
+        Vector2[] coast = MapConceptDrawingGeometry.SmoothClosed(map.Coast, 2);
         int riverNumber = 0, branchNumber = 0;
         // Snapshot avoids mutating the enumerated collection as rivers are added.
         foreach (ConceptWaterway inlet in map.Waterways.FindAll(w =>
             w.Kind == ConceptWaterKind.OceanInlet))
         {
             if (inlet.Kind != ConceptWaterKind.OceanInlet) continue;
-            if (!TryRiverMouth(map, inlet, out Vector2 mouth, out Vector2 heading))
+            if (!TryRiverMouth(map, coast, inlet, out Vector2 inlandStart,
+                out Vector2 shoreline, out Vector2 oceanOverlap, out Vector2 heading))
                 continue;
 
-            var fromMouth = TraceUpstream(map, mouth, heading,
+            var fromMouth = TraceUpstream(map, coast, inlandStart, heading,
                 Mathf.RoundToInt(Mathf.Lerp(15f, 70f, settings.RiverReach / 100f)),
                 settings.RiverWinding, ref random);
             if (fromMouth.Count < 5) continue;
 
-            // Source -> mouth, with one last point meeting the saltwater inlet.
+            // The final two samples cross the *verified* coast into the inlet.
+            // Never jump from an arbitrary inland point to an unverified tip.
             fromMouth.Reverse();
-            fromMouth.Add(inlet.Points[^1]);
+            fromMouth.Add(shoreline);
+            fromMouth.Add(oceanOverlap);
             var river = MakeWaterway(ConceptWaterKind.River, ++riverNumber,
-                fromMouth, 3.8f, 7.5f, 0.004f, map.Elevation);
+                fromMouth, 3.8f, 7.5f, 0f, map.Elevation)
+                with { ConnectedWaterwayId = inlet.Id };
             map.Waterways.Add(river);
 
             // Tribs join a major river, not random seaward coast points.
@@ -49,51 +55,89 @@ internal static class MapConceptWaterGenerator
                 float direction = (b % 2 == 0 ? 1f : -1f) *
                     random.Range(0.75f, 1.30f);
                 Vector2 sideways = upstream.Rotated(direction);
-                var branch = TraceUpstream(map, river.Points[junction], sideways,
+                var branch = TraceUpstream(map, coast, river.Points[junction], sideways,
                     random.NextInt(10, 27), settings.RiverWinding, ref random);
                 if (branch.Count < 5) continue;
                 branch.Reverse();
                 map.Waterways.Add(MakeWaterway(ConceptWaterKind.Tributary,
                     ++branchNumber, branch, 2.1f, 3.7f,
-                    river.SurfaceLevels[junction], map.Elevation));
+                    river.SurfaceLevels[junction], map.Elevation)
+                    with { ConnectedWaterwayId = river.Id });
             }
         }
     }
 
     // =========================================================
-    private static bool TryRiverMouth(MapConceptLayout map, ConceptWaterway inlet,
-        out Vector2 mouth, out Vector2 heading)
+    private static bool TryRiverMouth(MapConceptLayout map, Vector2[] coast,
+        ConceptWaterway inlet,
+        out Vector2 inlandStart, out Vector2 shoreline, out Vector2 oceanOverlap,
+        out Vector2 heading)
     {
         Vector2 tip = inlet.Points[^1];
-        heading = (tip - inlet.Points[^2]).Normalized();
-        for (float distance = 15f; distance <= 95f; distance += 7f)
+        inlandStart = shoreline = oceanOverlap = tip;
+        // If the final inlet control point sits in discarded inland water,
+        // locate its last genuine sea vertex and follow that local tangent.
+        int seaIndex = inlet.Points.Length - 1;
+        while (seaIndex >= 0 &&
+            MapConceptLayout.PointInPolygon(inlet.Points[seaIndex], coast))
+            seaIndex--;
+        if (seaIndex < 1) { heading = Vector2.Zero; return false; }
+        Vector2 sea = inlet.Points[seaIndex];
+        Vector2 toward = inlet.Points[Math.Min(seaIndex + 1, inlet.Points.Length - 1)];
+        heading = (toward - inlet.Points[seaIndex - 1]).Normalized();
+        if (heading.LengthSquared() < 0.5f) return false;
+
+        // Walk from existing inlet WATER to the FIRST mainland shoreline.
+        // This is the confluence. A finite fan handles curved inlet heads.
+        float[] angles = { 0f, -0.20f, 0.20f, -0.42f, 0.42f, -0.68f, 0.68f };
+        foreach (float angle in angles)
         {
-            // Search a narrow fan: curved inlet tips need not continue in the
-            // exact direction of their final carved line segment.
-            for (int offset = 0; offset < 5; offset++)
+            Vector2 direction = heading.Rotated(angle);
+            Vector2 previousSea = sea;
+            for (float distance = 3f; distance <= 155f; distance += 3f)
             {
-                float angle = offset switch
+                Vector2 next = sea + direction * distance;
+                if (!MapConceptLayout.PointInPolygon(next, coast))
                 {
-                    1 => -0.35f, 2 => 0.35f,
-                    3 => -0.72f, 4 => 0.72f, _ => 0f
-                };
-                Vector2 direction = heading.Rotated(angle);
-                Vector2 p = tip + direction * distance;
-                if (!MapConceptLayout.PointInPolygon(p, map.Coast) ||
-                    map.Elevation!.Sample(p) < 0.012f) continue;
+                    previousSea = next;
+                    continue;
+                }
+
+                // Bisect the real land/water crossing for a gap-free join.
+                Vector2 waterEdge = previousSea, landEdge = next;
+                for (int refine = 0; refine < 8; refine++)
+                {
+                    Vector2 mid = (waterEdge + landEdge) * 0.5f;
+                    if (MapConceptLayout.PointInPolygon(mid, coast))
+                        landEdge = mid;
+                    else waterEdge = mid;
+                }
+                Vector2 coast = (waterEdge + landEdge) * 0.5f;
+                Vector2 start = coast + direction * 17f;
+                Vector2 overlap = coast - direction * 10f;
+                // Avoid starting in a tiny peninsula or immediately re-entering sea.
+                if (!MapConceptLayout.PointInPolygon(start, coast) ||
+                    !MapConceptLayout.PointInPolygon(start + direction * 12f, coast) ||
+                    MapConceptLayout.PointInPolygon(overlap, coast) ||
+                    map.Elevation!.Sample(start) < 0.012f)
+                    break;
+
+                inlandStart = start;
+                shoreline = coast;
+                oceanOverlap = overlap;
                 heading = direction;
-                mouth = p;
                 return true;
             }
         }
-        mouth = tip;
-        return false;
+        return false; // Never emit a visually disconnected river.
     }
 
     // =========================================================
+    // =========================================================
     // Grow inland from the outlet towards gradually higher ground. This is a
     // heuristic valley walker, not a full filled-depression watershed model.
-    private static List<Vector2> TraceUpstream(MapConceptLayout map, Vector2 origin,
+    private static List<Vector2> TraceUpstream(MapConceptLayout map,
+        Vector2[] coast, Vector2 origin,
         Vector2 heading, int maxSteps, int winding, ref MapConceptSeedStream random)
     {
         var points = new List<Vector2>(maxSteps + 1) { origin };
@@ -112,7 +156,9 @@ internal static class MapConceptWaterGenerator
                     winding / 100f);
                 Vector2 nextDir = direction.Rotated(deviation).Normalized();
                 Vector2 candidate = position + nextDir * 14f;
-                if (!MapConceptLayout.PointInPolygon(candidate, map.Coast)) continue;
+                if (!MapConceptLayout.PointInPolygon(candidate, coast) ||
+                    !MapConceptLayout.PointInPolygon(position.Lerp(candidate, 0.5f),
+                        coast)) continue;
                 float height = map.Elevation.Sample(candidate);
                 if (height < 0.014f || height > 0.74f || height < previousHeight - 0.017f)
                     continue;
