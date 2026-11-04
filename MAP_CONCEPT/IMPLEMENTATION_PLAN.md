@@ -17,6 +17,14 @@
 | **BW-MAP2.5 — planned** | Seed-gallery quality checks, biome/land constraints, diagnostics, reproducible saved presets and visual polish |
 | **BW-MAP3.0 — planned** | Approved map-data translation into 3D generation, chunk-local sampling and streaming integration only after performance gate |
 
+## Intended handoff: MAP_CONCEPT → WORLD_CONCEPT (planned)
+
+- **MAP_CONCEPT is for 2D layout experimentation and approval.** The owner will iterate on island shape, mountain regions, forests, lakes, rivers, settlements and their relative positions here first. It remains an independently runnable concept tool, not the playable world.
+- **WORLD_CONCEPT is a future separate folder/test environment**, created only when the owner is happy with a chosen map layout. It will consume the approved exported blueprint/data (not merely a screenshot) and translate its coastline, elevation and region information into actual Godot 3D terrain, water and vegetation for free-fly visual inspection.
+- **Iterate visually in 3D:** fly around the generated mountains, forests, lakes and other regions; refine map data or translation rules as necessary without losing the selected layout. Preserve deterministic seeds, stable coordinates and versioned map exports.
+- **Then investigate world generation and streaming:** chunk generation/loading/unloading, distant terrain/LOD, vegetation residency and performance are subsequent experiments, not prerequisites to using MAP_CONCEPT. Coordinate this work with the existing `WORLD/` implementation and streaming plans rather than silently replacing them.
+- **Status: design intention only.** Do not create `WORLD_CONCEPT/`, alter `WORLD/`, or implement map-to-3D integration until explicitly requested. The eventual folder structure and integration milestone can be decided then.
+
 ## MAP2.1 generation contract
 
 - **Coastline stays identical for an existing seed and unchanged MAP2.0B sliders.** MAP2.1 runs after landmass selection with an independent seed stream, not by altering the coastline field.
